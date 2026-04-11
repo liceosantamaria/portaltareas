@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aula Digital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg:#0f0f11;--bg2:#17171b;--bg3:#1e1e24;--bg4:#26262e;--border:#2e2e38;
+    --text:#f0f0f4;--text2:#9898a8;--text3:#5a5a6e;
+    --accent:#6ee7b7;--accent2:#34d399;--accent-dim:rgba(110,231,183,0.12);--accent-dim2:rgba(110,231,183,0.06);
+    --red:#f87171;--red-dim:rgba(248,113,113,0.12);--amber:#fbbf24;--amber-dim:rgba(251,191,36,0.12);
+    --blue:#60a5fa;--blue-dim:rgba(96,165,250,0.12);--purple:#a78bfa;--purple-dim:rgba(167,139,250,0.12);
+    --radius:10px;--radius-lg:16px;--font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.6}
+
+  #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);position:relative;overflow:hidden}
+  #login-screen::before{content:'';position:fixed;width:600px;height:600px;background:radial-gradient(circle,rgba(110,231,183,0.07) 0%,transparent 70%);top:-100px;right:-100px;pointer-events:none}
+  .login-box{width:380px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:40px 36px;position:relative;z-index:1}
+  .login-logo{font-family:var(--mono);font-size:13px;color:var(--accent);letter-spacing:0.12em;margin-bottom:28px;display:flex;align-items:center;gap:8px}
+  .login-logo-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block}
+  .login-box h1{font-size:22px;font-weight:600;margin-bottom:6px}
+  .login-box>p{font-size:13px;color:var(--text2);margin-bottom:28px}
+  .login-toggle{text-align:center;margin-top:20px;font-size:13px;color:var(--text2)}
+  .login-toggle a{color:var(--accent);text-decoration:none;font-weight:500;cursor:pointer}
+
+  .field-group{margin-bottom:16px}
+  .field-group label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase}
+  input[type=text],input[type=email],input[type=password],input[type=date],input[type=number],select,textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;color:var(--text);font-family:var(--font);font-size:14px;outline:none;transition:border-color 0.2s}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+  select option{background:var(--bg3)}
+  textarea{resize:vertical;min-height:80px}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 18px;border-radius:var(--radius);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;border:none;transition:all 0.15s}
+  .btn-primary{background:var(--accent);color:#0a1a13;width:100%;padding:12px;font-size:15px}
+  .btn-primary:hover{background:var(--accent2)}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text2)}
+  .btn-ghost:hover{border-color:var(--text3);color:var(--text);background:var(--bg3)}
+  .btn-accent{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(110,231,183,0.25)}
+  .btn-accent:hover{background:rgba(110,231,183,0.2)}
+  .btn-sm{padding:6px 12px;font-size:12px;border-radius:7px}
+
+  #app{display:none;min-height:100vh}
+  .sidebar{position:fixed;left:0;top:0;width:240px;height:100vh;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;overflow-y:auto}
+  .sidebar-header{padding:22px 20px 16px;border-bottom:1px solid var(--border)}
+  .sidebar-logo{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:0.1em;display:flex;align-items:center;gap:6px;margin-bottom:14px}
+  .sidebar-user{display:flex;align-items:center;gap:10px}
+  .avatar{width:34px;height:34px;border-radius:8px;background:var(--accent-dim);border:1px solid rgba(110,231,183,0.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--accent);flex-shrink:0}
+  .avatar.teacher{background:var(--purple-dim);border-color:rgba(167,139,250,0.3);color:var(--purple)}
+  .sidebar-user-info{min-width:0}
+  .sidebar-user-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sidebar-user-role{font-size:11px;color:var(--text3);font-family:var(--mono)}
+  .sidebar-section{padding:16px 12px 8px}
+  .sidebar-section-label{font-size:10px;font-weight:500;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;padding:0 8px;margin-bottom:4px}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:13.5px;color:var(--text2);transition:all 0.15s;margin-bottom:1px;user-select:none}
+  .nav-item:hover{background:var(--bg3);color:var(--text)}
+  .nav-item.active{background:var(--accent-dim);color:var(--accent)}
+  .nav-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+  .sidebar-courses{padding:0 12px 8px;flex:1;overflow-y:auto}
+  .course-item{display:flex;align-items:center;padding:7px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);transition:all 0.15s;gap:8px}
+  .course-item:hover{background:var(--bg3);color:var(--text)}
+  .course-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .sidebar-footer{padding:12px;border-top:1px solid var(--border)}
+
+  .main{margin-left:240px;min-height:100vh;background:var(--bg)}
+  .topbar{height:56px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 28px;gap:16px;position:sticky;top:0;z-index:50}
+  .topbar-title{font-size:15px;font-weight:500;flex:1}
+  .content{padding:28px;max-width:1000px}
+
+  .section{display:none}
+  .section.active{display:block}
+  .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:16px;flex-wrap:wrap}
+  .page-header h2{font-size:20px;font-weight:600}
+  .page-header p{font-size:13px;color:var(--text2);margin-top:2px}
+
+  .grid-2{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+  .grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+  .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;transition:border-color 0.2s}
+  .card:hover{border-color:var(--text3)}
+  .card-course{cursor:pointer;position:relative;overflow:hidden}
+  .card-course-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
+  .course-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+  .card-course h3{font-size:14px;font-weight:600;margin-bottom:2px}
+  .card-course .meta{font-size:12px;color:var(--text2)}
+  .stats-row{display:flex;gap:16px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+  .stat{font-size:12px;color:var(--text2)}
+  .stat strong{color:var(--text);font-weight:500}
+
+  .task-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;display:flex;align-items:flex-start;gap:14px;margin-bottom:10px;transition:border-color 0.2s;cursor:pointer}
+  .task-item:hover{border-color:var(--text3)}
+  .task-status{width:10px;height:10px;border-radius:50%;margin-top:5px;flex-shrink:0}
+  .task-info{flex:1;min-width:0}
+  .task-title{font-size:14px;font-weight:500;margin-bottom:3px}
+  .task-meta{font-size:12px;color:var(--text2);display:flex;gap:12px;flex-wrap:wrap}
+  .task-actions{display:flex;gap:8px;align-items:center;flex-shrink:0}
+
+  .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:500;font-family:var(--mono)}
+  .badge-amber{background:var(--amber-dim);color:var(--amber)}
+  .badge-gray{background:var(--bg4);color:var(--text3)}
+
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+  .modal-overlay.open{display:flex}
+  .modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;width:100%;max-width:540px;max-height:85vh;overflow-y:auto;position:relative}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+  .modal-header h3{font-size:17px;font-weight:600}
+  .modal-close{width:30px;height:30px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:16px;transition:all 0.15s}
+  .modal-close:hover{color:var(--text);background:var(--bg4)}
+  .modal-actions{display:flex;gap:10px;margin-top:22px;justify-content:flex-end}
+
+  .submission-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;display:flex;align-items:center;gap:14px;margin-bottom:8px}
+  .sub-info{flex:1;min-width:0}
+  .sub-name{font-size:13.5px;font-weight:500}
+  .sub-meta{font-size:12px;color:var(--text2);margin-top:2px}
+  .sub-grade{font-family:var(--mono);font-size:20px;font-weight:500;color:var(--accent)}
+
+  .chat-messages{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg) var(--radius-lg) 0 0;height:360px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+  .chat-msg{max-width:75%;padding:10px 14px;border-radius:12px;font-size:13.5px;line-height:1.5}
+  .chat-msg.mine{background:var(--accent-dim);border:1px solid rgba(110,231,183,0.2);align-self:flex-end}
+  .chat-msg.theirs{background:var(--bg3);border:1px solid var(--border);align-self:flex-start}
+  .chat-msg-sender{font-size:11px;color:var(--text3);margin-bottom:3px;font-family:var(--mono)}
+  .chat-msg-time{font-size:10px;color:var(--text3);margin-top:4px}
+  .chat-input-area{background:var(--bg2);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-lg) var(--radius-lg);padding:12px;display:flex;gap:10px}
+  .chat-input-area input{flex:1}
+
+  .drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:32px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg3)}
+  .drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:var(--accent-dim2)}
+  .drop-zone input[type=file]{display:none}
+  .drop-icon{font-size:28px;margin-bottom:8px}
+  .drop-text{font-size:13px;color:var(--text2)}
+  .drop-text span{color:var(--accent);font-weight:500}
+
+  .material-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px}
+  .file-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+  .file-info{flex:1;min-width:0}
+  .file-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .file-meta{font-size:11px;color:var(--text2);margin-top:2px;font-family:var(--mono)}
+
+  .toast-container{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:9999}
+  .toast{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 18px;font-size:13px;color:var(--text);animation:slideUp 0.25s ease;max-width:320px;display:flex;align-items:center;gap:10px}
+  .toast.success{border-color:rgba(110,231,183,0.4)}
+  .toast.error{border-color:rgba(248,113,113,0.4)}
+  @keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+  .divider{height:1px;background:var(--border);margin:20px 0}
+  .empty-state{text-align:center;padding:48px 20px;color:var(--text3)}
+  .empty-icon{font-size:36px;margin-bottom:12px}
+  .empty-title{font-size:15px;font-weight:500;color:var(--text2);margin-bottom:6px}
+  .empty-sub{font-size:13px}
+  .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;background:var(--bg4);color:var(--text2);font-family:var(--mono)}
+
+  .tabs{display:flex;gap:2px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:4px;margin-bottom:20px;width:fit-content}
+  .tab{padding:7px 16px;border-radius:7px;font-size:13px;cursor:pointer;color:var(--text2);transition:all 0.15s;border:none;background:transparent;font-family:var(--font)}
+  .tab.active{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+  .tab:hover:not(.active){color:var(--text)}
+
+  .progress-bar{height:4px;background:var(--bg4);border-radius:99px;overflow:hidden;margin-top:8px}
+  .progress-fill{height:100%;background:var(--accent);border-radius:99px;transition:width 0.4s}
+  .color-opt{width:32px;height:32px;border-radius:8px;cursor:pointer;border:2px solid transparent;transition:border-color 0.15s}
+  .color-opt.selected{border-color:white}
+</style>
+</head>
+<body>
+
+<div class="toast-container" id="toasts"></div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo"><span class="login-logo-dot"></span>AULA DIGITAL</div>
+    <h1 id="login-title">Iniciar sesión</h1>
+    <p id="login-sub">Plataforma de clases y entregas</p>
+    <div id="register-field" style="display:none">
+      <div class="field-group"><label>Nombre completo</label><input type="text" id="login-name" placeholder="Tu nombre"></div>
+    </div>
+    <div class="field-group"><label>Correo</label><input type="email" id="login-email" placeholder="tu@correo.com"></div>
+    <div class="field-group"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Entrar</button>
+    <div class="login-toggle" id="login-toggle">¿Primera vez? <a onclick="toggleRegister()">Crear cuenta de profesor</a></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo"><span style="width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block"></span>AULA DIGITAL</div>
+      <div class="sidebar-user">
+        <div class="avatar" id="sb-avatar">A</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sb-name">Usuario</div>
+          <div class="sidebar-user-role" id="sb-role">alumno</div>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">General</div>
+      <div class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard"><span class="nav-icon">⊡</span> Panel</div>
+      <div class="nav-item" onclick="showSection('courses')" id="nav-courses"><span class="nav-icon">◫</span> Clases</div>
+      <div class="nav-item" onclick="showSection('tasks')" id="nav-tasks"><span class="nav-icon">◈</span> Tareas</div>
+      <div class="nav-item" onclick="showSection('chat')" id="nav-chat"><span class="nav-icon">◎</span> Chat</div>
+    </div>
+    <div class="sidebar-section" id="teacher-nav" style="display:none">
+      <div class="sidebar-section-label">Profesor</div>
+      <div class="nav-item" onclick="showSection('submissions')" id="nav-submissions"><span class="nav-icon">◑</span> Entregas</div>
+      <div class="nav-item" onclick="showSection('students')" id="nav-students"><span class="nav-icon">◉</span> Alumnos</div>
+    </div>
+    <div class="sidebar-courses" id="sidebar-courses">
+      <div class="sidebar-section-label" style="padding:0 0 4px">Mis Clases</div>
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost" style="width:100%;font-size:13px" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Panel</div>
+    </div>
+    <div class="content">
+
+      <div class="section active" id="section-dashboard">
+        <div class="page-header"><div><h2 id="dash-greeting">Bienvenido</h2><p>Resumen de tu actividad</p></div></div>
+        <div class="grid-3" id="dash-stats"></div>
+        <div style="margin-top:28px">
+          <h3 style="font-size:15px;font-weight:500;margin-bottom:14px;color:var(--text2)">Tareas recientes</h3>
+          <div id="dash-recent"></div>
+        </div>
+      </div>
+
+      <div class="section" id="section-courses">
+        <div class="page-header">
+          <div><h2>Clases</h2><p>Todas tus clases</p></div>
+          <button class="btn btn-accent" onclick="openModal('modal-new-course')" id="btn-new-course" style="display:none">+ Nueva clase</button>
+        </div>
+        <div class="grid-2" id="courses-grid"></div>
+      </div>
+
+      <div class="section" id="section-tasks">
+        <div class="page-header">
+          <div><h2 id="tasks-title">Tareas</h2><p id="tasks-sub">Todas las tareas</p></div>
+          <button class="btn btn-accent" onclick="openModal('modal-new-task')" id="btn-new-task" style="display:none">+ Nueva tarea</button>
+        </div>
+        <div class="tabs" id="tasks-tabs" style="display:none">
+          <button class="tab active" onclick="filterTasks('all',this)">Todas</button>
+          <button class="tab" onclick="filterTasks('pending',this)">Pendientes</button>
+          <button class="tab" onclick="filterTasks('submitted',this)">Entregadas</button>
+          <button class="tab" onclick="filterTasks('graded',this)">Calificadas</button>
+        </div>
+        <div id="tasks-list"></div>
+      </div>
+
+      <div class="section" id="section-submissions">
+        <div class="page-header">
+          <div><h2>Entregas</h2><p>Revisa y califica los trabajos</p></div>
+          <select id="sub-filter-course" onchange="loadSubmissions()" style="width:auto;padding:8px 12px;font-size:13px"><option value="">Todas las clases</option></select>
+        </div>
+        <div id="submissions-list"></div>
+      </div>
+
+      <div class="section" id="section-students">
+        <div class="page-header">
+          <div><h2>Alumnos</h2><p>Gestiona las cuentas</p></div>
+          <button class="btn btn-accent" onclick="openModal('modal-new-student')">+ Nuevo alumno</button>
+        </div>
+        <div id="students-list"></div>
+      </div>
+
+      <div class="section" id="section-chat">
+        <div class="page-header">
+          <div><h2>Chat de clase</h2><p>Mensajes por clase</p></div>
+          <select id="chat-course-select" onchange="loadChat()" style="width:auto;padding:8px 12px;font-size:13px"><option value="">Selecciona una clase...</option></select>
+        </div>
+        <div id="chat-area"><div class="empty-state"><div class="empty-icon">◎</div><div class="empty-title">Selecciona una clase</div></div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-new-course">
+  <div class="modal">
+    <div class="modal-header"><h3>Nueva clase</h3><button class="modal-close" onclick="closeModal('modal-new-course')">✕</button></div>
+    <div class="field-group"><label>Nombre</label><input type="text" id="nc-name" placeholder="Ej. Programación en Python"></div>
+    <div class="field-group"><label>Descripción (opcional)</label><textarea id="nc-desc" placeholder="Descripción breve..."></textarea></div>
+    <div class="field-group">
+      <label>Color</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="color-opt selected" data-color="#6ee7b7" style="background:#6ee7b7" onclick="selectColor(this)"></div>
+        <div class="color-opt" data-color="#60a5fa" style="background:#60a5fa" onclick="selectColor(this)"></div>
+        <div class="color-opt" data-color="#f87171" style="background:#f87171" onclick="selectColor(this)"></div>
+        <div class="color-opt" data-color="#fbbf24" style="background:#fbbf24" onclick="selectColor(this)"></div>
+        <div class="color-opt" data-color="#a78bfa" style="background:#a78bfa" onclick="selectColor(this)"></div>
+        <div class="color-opt" data-color="#fb923c" style="background:#fb923c" onclick="selectColor(this)"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-new-course')">Cancelar</button>
+      <button class="btn btn-accent" onclick="createCourse()">Crear clase</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-new-task">
+  <div class="modal">
+    <div class="modal-header"><h3>Nueva tarea</h3><button class="modal-close" onclick="closeModal('modal-new-task')">✕</button></div>
+    <div class="field-group"><label>Clase</label><select id="nt-course"></select></div>
+    <div class="field-group"><label>Título</label><input type="text" id="nt-title" placeholder="Ej. Ejercicio de ciclos for"></div>
+    <div class="field-group"><label>Instrucciones</label><textarea id="nt-desc" placeholder="Describe qué deben hacer..." style="min-height:100px"></textarea></div>
+    <div class="field-group"><label>Fecha límite</label><input type="date" id="nt-due"></div>
+    <div class="field-group">
+      <label>Material adjunto (opcional)</label>
+      <div class="drop-zone" id="nt-drop" onclick="document.getElementById('nt-file').click()">
+        <input type="file" id="nt-file" onchange="handleTaskFile(event)">
+        <div class="drop-icon">📁</div>
+        <div class="drop-text">Haz clic para adjuntar o <span>arrastra aquí</span></div>
+        <div id="nt-file-name" style="font-size:12px;color:var(--accent);margin-top:8px"></div>
+      </div>
+      <div id="nt-prog-wrap" style="display:none;margin-top:8px">
+        <div class="progress-bar"><div class="progress-fill" id="nt-prog-fill" style="width:0%"></div></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px" id="nt-prog-text">Subiendo...</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-new-task')">Cancelar</button>
+      <button class="btn btn-accent" onclick="createTask()">Publicar tarea</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-new-student">
+  <div class="modal">
+    <div class="modal-header"><h3>Nuevo alumno</h3><button class="modal-close" onclick="closeModal('modal-new-student')">✕</button></div>
+    <div class="field-group"><label>Nombre completo</label><input type="text" id="ns-name" placeholder="Nombre del alumno"></div>
+    <div class="field-group"><label>Correo</label><input type="email" id="ns-email" placeholder="alumno@correo.com"></div>
+    <div class="field-group"><label>Contraseña inicial</label><input type="text" id="ns-pass" placeholder="Ej. alumno123"></div>
+    <div class="field-group">
+      <label>Clases inscritas</label>
+      <div id="ns-courses" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-new-student')">Cancelar</button>
+      <button class="btn btn-accent" onclick="createStudent()">Crear alumno</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-task-detail">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header"><h3 id="td-title">Tarea</h3><button class="modal-close" onclick="closeModal('modal-task-detail')">✕</button></div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:6px;font-family:var(--mono)" id="td-meta"></div>
+      <p id="td-desc" style="font-size:14px;color:var(--text2);line-height:1.65"></p>
+    </div>
+    <div id="td-material" style="display:none;margin-bottom:16px">
+      <div class="material-item">
+        <div class="file-icon" style="background:var(--blue-dim)">📎</div>
+        <div class="file-info"><div class="file-name" id="td-mat-name">Material</div><div class="file-meta">Archivo del profesor</div></div>
+        <a class="btn btn-ghost btn-sm" id="td-mat-link" href="#" target="_blank">↓ Descargar</a>
+      </div>
+    </div>
+    <div id="td-submit-area">
+      <div class="divider"></div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:12px">Tu entrega</div>
+      <div id="td-current-sub" style="display:none">
+        <div class="material-item" style="margin-bottom:12px">
+          <div class="file-icon" style="background:var(--accent-dim)">✓</div>
+          <div class="file-info"><div class="file-name" id="td-sub-name">Entregado</div><div class="file-meta" id="td-sub-meta"></div></div>
+          <a class="btn btn-ghost btn-sm" id="td-sub-link" href="#" target="_blank">↓ Ver</a>
+        </div>
+        <div id="td-grade-display" style="display:none">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Calificación</div>
+          <div style="font-size:28px;font-weight:600;color:var(--accent);font-family:var(--mono)" id="td-grade-val"></div>
+          <div style="font-size:13px;color:var(--text2);margin-top:6px" id="td-grade-comment"></div>
+        </div>
+      </div>
+      <div id="td-upload-area">
+        <div class="drop-zone" id="td-drop" onclick="document.getElementById('td-file').click()">
+          <input type="file" id="td-file" onchange="handleSubmitFile(event)">
+          <div class="drop-icon">⬆</div>
+          <div class="drop-text">Sube tu <span>Excel, código o PDF</span></div>
+          <div id="td-file-name" style="font-size:12px;color:var(--accent);margin-top:8px"></div>
+        </div>
+        <div id="td-prog-wrap" style="display:none;margin-top:10px">
+          <div class="progress-bar"><div class="progress-fill" id="td-prog-fill" style="width:0%"></div></div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px" id="td-prog-text">Subiendo...</div>
+        </div>
+        <button class="btn btn-accent" onclick="submitTask()" style="margin-top:12px;width:100%">Entregar tarea</button>
+      </div>
+    </div>
+    <div id="td-grade-area" style="display:none">
+      <div class="divider"></div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:12px">Entregas de alumnos</div>
+      <div id="td-subs-for-grade"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-grade">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header"><h3>Calificar entrega</h3><button class="modal-close" onclick="closeModal('modal-grade')">✕</button></div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px" id="grade-student-name"></div>
+    <div class="field-group"><label>Nota (0–100)</label><input type="number" id="grade-val" min="0" max="100" placeholder="85"></div>
+    <div class="field-group"><label>Comentario (opcional)</label><textarea id="grade-comment" placeholder="Retroalimentación para el alumno..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-grade')">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveGrade()">Guardar nota</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL='https://rkructjezzlpwlqvsrdv.supabase.co';
+const SUPA_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrcnVjdGplenpscHdscXZzcmR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4OTE5NjUsImV4cCI6MjA5MTQ2Nzk2NX0.emUiazok4NMxIN0X_ddVDIUOuhitOMGNZq1CKPmj0Ck';
+const SUPA_SERVICE='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrcnVjdGplenpscHdscXZzcmR2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTg5MTk2NSwiZXhwIjoyMDkxNDY3OTY1fQ.qyrO8jmq_cwCNgaMttR63FnUijK1nr4w2AiWlsSiItw';
+
+const{createClient}=supabase;
+const db=createClient(SUPA_URL,SUPA_ANON);
+const adminDb=createClient(SUPA_URL,SUPA_SERVICE,{auth:{autoRefreshToken:false,persistSession:false}});
+
+let currentUser=null,currentProfile=null;
+let allCourses=[],allTasks=[];
+let selectedColor='#6ee7b7';
+let taskFileToUpload=null,submitFileToUpload=null;
+let currentTaskDetail=null,currentSubmissionForGrade=null;
+let currentTaskFilter='all',currentCourseTasks=null;
+let chatChannel=null;
+
+window.onload=()=>{
+  db.auth.onAuthStateChange(async(event,session)=>{
+    if(session?.user){
+      currentUser=session.user;
+      const{data}=await db.from('profiles').select('*').eq('id',session.user.id).single();
+      currentProfile=data;
+      if(currentProfile) showApp();
+    } else {
+      currentUser=null;currentProfile=null;
+      document.getElementById('app').style.display='none';
+      document.getElementById('login-screen').style.display='flex';
+    }
+  });
+};
+
+let isRegisterMode=false;
+function toggleRegister(){
+  isRegisterMode=!isRegisterMode;
+  document.getElementById('login-title').textContent=isRegisterMode?'Crear cuenta':'Iniciar sesión';
+  document.getElementById('login-sub').textContent=isRegisterMode?'Solo para el profesor':'Plataforma de clases y entregas';
+  document.getElementById('register-field').style.display=isRegisterMode?'block':'none';
+  document.getElementById('login-btn').textContent=isRegisterMode?'Crear cuenta':'Entrar';
+  document.getElementById('login-toggle').innerHTML=isRegisterMode
+    ?'¿Ya tienes cuenta? <a onclick="toggleRegister()">Iniciar sesión</a>'
+    :'¿Primera vez? <a onclick="toggleRegister()">Crear cuenta de profesor</a>';
+}
+
+async function doLogin(){
+  const email=v('login-email'),pass=v('login-pass');
+  if(!email||!pass){toast('Completa los campos','error');return;}
+  if(isRegisterMode){
+    const name=v('login-name');
+    if(!name){toast('Ingresa tu nombre','error');return;}
+    const{data,error}=await db.auth.signUp({email,password:pass});
+    if(error){toast(error.message,'error');return;}
+    await db.from('profiles').insert({id:data.user.id,name,email,role:'teacher'});
+    toast('Cuenta creada ✓','success');
+  } else {
+    const{error}=await db.auth.signInWithPassword({email,password:pass});
+    if(error){toast('Correo o contraseña incorrectos','error');}
+  }
+}
+
+async function doLogout(){await db.auth.signOut();allCourses=[];allTasks=[];}
+
+async function showApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  const isT=currentProfile.role==='teacher';
+  const ini=currentProfile.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('sb-name').textContent=currentProfile.name;
+  document.getElementById('sb-role').textContent=isT?'profesor':'alumno';
+  document.getElementById('sb-avatar').textContent=ini;
+  if(isT){
+    document.getElementById('sb-avatar').classList.add('teacher');
+    document.getElementById('teacher-nav').style.display='block';
+    document.getElementById('btn-new-course').style.display='flex';
+    document.getElementById('btn-new-task').style.display='flex';
+  } else {
+    document.getElementById('tasks-tabs').style.display='flex';
+  }
+  await loadCourses();
+  loadDashboard();
+}
+
+async function loadCourses(){
+  const isT=currentProfile.role==='teacher';
+  if(isT){
+    const{data}=await db.from('courses').select('*').eq('teacher_id',currentUser.id).order('created_at');
+    allCourses=data||[];
+  } else {
+    const{data:en}=await db.from('enrollments').select('course_id').eq('student_id',currentUser.id);
+    if(!en?.length){allCourses=[];}
+    else{const{data}=await db.from('courses').select('*').in('id',en.map(e=>e.course_id));allCourses=data||[];}
+  }
+  renderSidebarCourses();renderCoursesGrid();populateCourseSelects();
+}
+
+function renderSidebarCourses(){
+  document.getElementById('sidebar-courses').innerHTML=
+    `<div class="sidebar-section-label" style="padding:0 0 4px">Mis Clases</div>`+
+    allCourses.map(c=>`<div class="course-item" onclick="filterByClass('${c.id}')"><span class="course-dot" style="background:${c.color||'#6ee7b7'}"></span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</span></div>`).join('');
+}
+
+function renderCoursesGrid(){
+  const g=document.getElementById('courses-grid');
+  if(!allCourses.length){g.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">◫</div><div class="empty-title">No hay clases aún</div></div>`;return;}
+  g.innerHTML=allCourses.map(c=>`
+    <div class="card card-course" onclick="openCourse('${c.id}')">
+      <div style="height:3px;background:${c.color||'#6ee7b7'};position:absolute;top:0;left:0;right:0;border-radius:var(--radius-lg) var(--radius-lg) 0 0"></div>
+      <div class="card-course-header">
+        <div class="course-icon" style="background:${hexAlpha(c.color||'#6ee7b7',.12)}">${getCourseEmoji(c.name)}</div>
+        <div><h3>${c.name}</h3><div class="meta">${c.description||'Sin descripción'}</div></div>
+      </div>
+      <div class="stats-row">
+        <div class="stat"><strong id="ct-${c.id}">—</strong> tareas</div>
+        <div class="stat"><strong id="cs-${c.id}">—</strong> alumnos</div>
+      </div>
+    </div>`).join('');
+  allCourses.forEach(async c=>{
+    const{count:tc}=await db.from('tasks').select('*',{count:'exact',head:true}).eq('course_id',c.id);
+    const{count:sc}=await db.from('enrollments').select('*',{count:'exact',head:true}).eq('course_id',c.id);
+    const te=document.getElementById('ct-'+c.id),se=document.getElementById('cs-'+c.id);
+    if(te)te.textContent=tc||0;if(se)se.textContent=sc||0;
+  });
+}
+
+function populateCourseSelects(){
+  ['nt-course','chat-course-select','sub-filter-course'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    const pre=id==='sub-filter-course'?'<option value="">Todas las clases</option>':id==='chat-course-select'?'<option value="">Selecciona una clase...</option>':'';
+    el.innerHTML=pre+allCourses.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  });
+  const ns=document.getElementById('ns-courses');
+  if(ns)ns.innerHTML=allCourses.map(c=>`<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;background:var(--bg3);padding:4px 10px;border-radius:6px;border:1px solid var(--border)"><input type="checkbox" class="ns-cb" value="${c.id}"> ${c.name}</label>`).join('');
+}
+
+async function createCourse(){
+  const name=v('nc-name'),desc=v('nc-desc');
+  if(!name){toast('Ingresa el nombre','error');return;}
+  const{error}=await db.from('courses').insert({name,description:desc,color:selectedColor,teacher_id:currentUser.id});
+  if(error){toast(error.message,'error');return;}
+  closeModal('modal-new-course');set('nc-name','');set('nc-desc','');
+  await loadCourses();toast('Clase creada ✓','success');
+}
+
+function openCourse(id){showSection('tasks');filterByClass(id);}
+function filterByClass(id){
+  currentCourseTasks=id;loadTasks(id);
+  const c=allCourses.find(x=>x.id===id);
+  if(c){document.getElementById('tasks-title').textContent=c.name;document.getElementById('tasks-sub').textContent='Tareas de esta clase';}
+}
+
+async function loadTasks(courseId=null){
+  currentCourseTasks=courseId;
+  const isT=currentProfile.role==='teacher';
+  let q=db.from('tasks').select('*').order('created_at',{ascending:false});
+  if(courseId)q=q.eq('course_id',courseId);
+  else if(isT)q=q.eq('teacher_id',currentUser.id);
+  else{
+    if(!allCourses.length){allTasks=[];renderTasks();return;}
+    q=q.in('course_id',allCourses.map(c=>c.id));
+  }
+  const{data}=await q;allTasks=data||[];renderTasks();
+}
+
+async function renderTasks(){
+  const list=document.getElementById('tasks-list');
+  const isT=currentProfile.role==='teacher';
+  let tasks=allTasks;
+  if(!isT&&currentTaskFilter!=='all'){
+    const{data:subs}=await db.from('submissions').select('task_id,grade').eq('student_id',currentUser.id);
+    const sm={};(subs||[]).forEach(s=>sm[s.task_id]=s);
+    tasks=allTasks.filter(t=>{
+      const s=sm[t.id];
+      if(currentTaskFilter==='pending')return!s;
+      if(currentTaskFilter==='submitted')return s&&s.grade===null;
+      if(currentTaskFilter==='graded')return s&&s.grade!==null;
+    });
+  }
+  if(!tasks.length){list.innerHTML=emptyState('◈','Sin tareas','No hay tareas publicadas aún');return;}
+  list.innerHTML=tasks.map(t=>{
+    const c=allCourses.find(x=>x.id===t.course_id);
+    const due=t.due_date?new Date(t.due_date+'T12:00:00').toLocaleDateString('es-GT',{day:'2-digit',month:'short'}):'Sin fecha';
+    const late=t.due_date&&new Date(t.due_date)<new Date();
+    return `<div class="task-item" onclick="openTaskDetail('${t.id}')">
+      <div class="task-status" style="background:${c?.color||'#6ee7b7'}"></div>
+      <div class="task-info">
+        <div class="task-title">${t.title}</div>
+        <div class="task-meta">
+          <span>📅 ${due}${late?' · <span style="color:var(--red)">vencida</span>':''}</span>
+          ${c?`<span>· ${c.name}</span>`:''}
+          ${isT?`<span id="sc-${t.id}">· cargando...</span>`:''}
+        </div>
+      </div>
+      <div class="task-actions">${t.material_url?`<a class="btn btn-ghost btn-sm" href="${t.material_url}" target="_blank" onclick="event.stopPropagation()">↓</a>`:''}</div>
+    </div>`;
+  }).join('');
+  if(isT)tasks.forEach(async t=>{
+    const{count}=await db.from('submissions').select('*',{count:'exact',head:true}).eq('task_id',t.id);
+    const el=document.getElementById('sc-'+t.id);if(el)el.textContent=`· ${count||0} entregas`;
+  });
+}
+
+function filterTasks(f,btn){
+  currentTaskFilter=f;
+  document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');renderTasks();
+}
+
+async function createTask(){
+  const courseId=v('nt-course'),title=v('nt-title'),desc=v('nt-desc'),due=v('nt-due');
+  if(!courseId||!title){toast('Completa los campos obligatorios','error');return;}
+  const td={course_id:courseId,title,description:desc,due_date:due||null,teacher_id:currentUser.id};
+  if(taskFileToUpload){
+    const path=`tasks/${currentUser.id}/${Date.now()}_${taskFileToUpload.name}`;
+    document.getElementById('nt-prog-wrap').style.display='block';
+    document.getElementById('nt-prog-fill').style.width='40%';
+    const{error:ue}=await db.storage.from('files').upload(path,taskFileToUpload);
+    if(ue){toast('Error subiendo archivo: '+ue.message,'error');document.getElementById('nt-prog-wrap').style.display='none';return;}
+    const{data:ud}=db.storage.from('files').getPublicUrl(path);
+    td.material_url=ud.publicUrl;td.material_name=taskFileToUpload.name;
+    taskFileToUpload=null;document.getElementById('nt-prog-fill').style.width='100%';
+    setTimeout(()=>document.getElementById('nt-prog-wrap').style.display='none',500);
+  }
+  const{error}=await db.from('tasks').insert(td);
+  if(error){toast(error.message,'error');return;}
+  closeModal('modal-new-task');set('nt-title','');set('nt-desc','');set('nt-due','');
+  document.getElementById('nt-file-name').textContent='';
+  await loadTasks(currentCourseTasks);toast('Tarea publicada ✓','success');
+}
+
+async function openTaskDetail(taskId){
+  const task=allTasks.find(t=>t.id===taskId);if(!task)return;
+  currentTaskDetail=task;
+  const isT=currentProfile.role==='teacher';
+  document.getElementById('td-title').textContent=task.title;
+  document.getElementById('td-desc').textContent=task.description||'Sin descripción';
+  const c=allCourses.find(x=>x.id===task.course_id);
+  const due=task.due_date?new Date(task.due_date+'T12:00:00').toLocaleDateString('es-GT',{weekday:'long',day:'numeric',month:'long'}):'Sin fecha límite';
+  document.getElementById('td-meta').textContent=`${c?.name||''} · ${due}`;
+  if(task.material_url){
+    document.getElementById('td-material').style.display='block';
+    document.getElementById('td-mat-name').textContent=task.material_name||'Archivo adjunto';
+    document.getElementById('td-mat-link').href=task.material_url;
+  } else document.getElementById('td-material').style.display='none';
+  if(isT){
+    document.getElementById('td-submit-area').style.display='none';
+    document.getElementById('td-grade-area').style.display='block';
+    await loadSubsForTask(task.id);
+  } else {
+    document.getElementById('td-submit-area').style.display='block';
+    document.getElementById('td-grade-area').style.display='none';
+    await loadMySubmission(task.id);
+  }
+  openModal('modal-task-detail');
+}
+
+async function loadMySubmission(taskId){
+  const{data}=await db.from('submissions').select('*').eq('task_id',taskId).eq('student_id',currentUser.id).maybeSingle();
+  const curr=document.getElementById('td-current-sub'),up=document.getElementById('td-upload-area');
+  if(data){
+    curr.style.display='block';
+    document.getElementById('td-sub-name').textContent=data.file_name||'Archivo entregado';
+    document.getElementById('td-sub-link').href=data.file_url||'#';
+    document.getElementById('td-sub-meta').textContent=`Entregado el ${new Date(data.submitted_at).toLocaleDateString('es-GT')}`;
+    if(data.grade!==null&&data.grade!==undefined){
+      document.getElementById('td-grade-display').style.display='block';
+      document.getElementById('td-grade-val').textContent=data.grade+'/100';
+      document.getElementById('td-grade-comment').textContent=data.comment||'';
+    } else document.getElementById('td-grade-display').style.display='none';
+    up.style.display='none';
+  } else {
+    curr.style.display='none';up.style.display='block';
+    document.getElementById('td-file-name').textContent='';submitFileToUpload=null;
+  }
+}
+
+async function loadSubsForTask(taskId){
+  const{data:subs}=await db.from('submissions').select('*').eq('task_id',taskId);
+  const el=document.getElementById('td-subs-for-grade');
+  if(!subs?.length){el.innerHTML=`<div style="font-size:13px;color:var(--text3)">Sin entregas aún</div>`;return;}
+  el.innerHTML=subs.map(s=>`
+    <div class="submission-item">
+      <div class="sub-info"><div class="sub-name">${s.student_name}</div><div class="sub-meta">${s.file_name||'archivo'} · ${new Date(s.submitted_at).toLocaleDateString('es-GT')}</div></div>
+      ${s.grade!==null?`<div class="sub-grade">${s.grade}</div>`:`<span class="badge badge-amber">Pendiente</span>`}
+      <a class="btn btn-ghost btn-sm" href="${s.file_url}" target="_blank">↓</a>
+      <button class="btn btn-accent btn-sm" onclick="openGradeModal('${s.id}','${s.student_name}')">Calificar</button>
+    </div>`).join('');
+}
+
+async function submitTask(){
+  if(!submitFileToUpload){toast('Selecciona un archivo primero','error');return;}
+  const pw=document.getElementById('td-prog-wrap'),pf=document.getElementById('td-prog-fill'),pt=document.getElementById('td-prog-text');
+  pw.style.display='block';pf.style.width='30%';pt.textContent='Subiendo archivo...';
+  const path=`submissions/${currentUser.id}/${Date.now()}_${submitFileToUpload.name}`;
+  const{error:ue}=await db.storage.from('files').upload(path,submitFileToUpload);
+  if(ue){toast('Error: '+ue.message,'error');pw.style.display='none';return;}
+  pf.style.width='80%';
+  const{data:ud}=db.storage.from('files').getPublicUrl(path);
+  await db.from('submissions').insert({task_id:currentTaskDetail.id,student_id:currentUser.id,student_name:currentProfile.name,file_url:ud.publicUrl,file_name:submitFileToUpload.name});
+  pf.style.width='100%';pt.textContent='¡Entregado!';
+  setTimeout(()=>pw.style.display='none',1000);
+  submitFileToUpload=null;
+  await loadMySubmission(currentTaskDetail.id);toast('Tarea entregada ✓','success');
+}
+
+function openGradeModal(subId,name){
+  currentSubmissionForGrade=subId;
+  document.getElementById('grade-student-name').textContent=name;
+  set('grade-val','');set('grade-comment','');openModal('modal-grade');
+}
+
+async function saveGrade(){
+  const grade=parseInt(v('grade-val'));
+  if(isNaN(grade)||grade<0||grade>100){toast('Nota válida entre 0 y 100','error');return;}
+  await db.from('submissions').update({grade,comment:v('grade-comment')}).eq('id',currentSubmissionForGrade);
+  closeModal('modal-grade');await loadSubsForTask(currentTaskDetail.id);toast('Nota guardada ✓','success');
+}
+
+async function loadSubmissions(){
+  const courseId=v('sub-filter-course');
+  let q=db.from('submissions').select('*').order('submitted_at',{ascending:false});
+  if(courseId){
+    const{data:tasks}=await db.from('tasks').select('id').eq('course_id',courseId);
+    if(!tasks?.length){document.getElementById('submissions-list').innerHTML=emptyState('◑','Sin entregas','No hay entregas para esta clase');return;}
+    q=q.in('task_id',tasks.map(t=>t.id));
+  }
+  const{data:subs}=await q;
+  const list=document.getElementById('submissions-list');
+  if(!subs?.length){list.innerHTML=emptyState('◑','Sin entregas','Aún no hay entregas');return;}
+  list.innerHTML=subs.map(s=>{
+    const task=allTasks.find(t=>t.id===s.task_id);
+    return `<div class="submission-item">
+      <div class="file-icon" style="background:var(--blue-dim)">📄</div>
+      <div class="sub-info"><div class="sub-name">${s.student_name}</div><div class="sub-meta">${task?.title||'Tarea'} · ${new Date(s.submitted_at).toLocaleDateString('es-GT')}</div></div>
+      ${s.grade!==null?`<div class="sub-grade">${s.grade}<span style="font-size:12px;color:var(--text3)">/100</span></div>`:`<span class="badge badge-amber">Sin calificar</span>`}
+      <a class="btn btn-ghost btn-sm" href="${s.file_url}" target="_blank">↓ Ver</a>
+      <button class="btn btn-accent btn-sm" onclick="currentTaskDetail={id:'${s.task_id}'};openGradeModal('${s.id}','${s.student_name}')">Calificar</button>
+    </div>`;
+  }).join('');
+}
+
+async function loadStudents(){
+  const{data:students}=await db.from('profiles').select('*').eq('role','student').eq('teacher_id',currentUser.id);
+  const list=document.getElementById('students-list');
+  if(!students?.length){list.innerHTML=emptyState('◉','Sin alumnos','Agrega tu primer alumno');return;}
+  for(const s of students){
+    const{data:en}=await db.from('enrollments').select('course_id').eq('student_id',s.id);
+    s.courseIds=(en||[]).map(e=>e.course_id);
+  }
+  list.innerHTML=students.map(s=>`
+    <div class="submission-item">
+      <div class="avatar" style="width:36px;height:36px;font-size:12px">${initials(s.name)}</div>
+      <div class="sub-info"><div class="sub-name">${s.name}</div><div class="sub-meta">${s.email}</div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${s.courseIds.map(cid=>{const c=allCourses.find(x=>x.id===cid);return c?`<span class="tag">${c.name}</span>`:''}).join('')}</div>
+    </div>`).join('');
+}
+
+async function createStudent(){
+  const name=v('ns-name'),email=v('ns-email'),pass=v('ns-pass');
+  if(!name||!email||!pass){toast('Completa todos los campos','error');return;}
+  const courseIds=[...document.querySelectorAll('.ns-cb:checked')].map(cb=>cb.value);
+  const{data,error}=await adminDb.auth.admin.createUser({email,password:pass,email_confirm:true});
+  if(error){toast('Error: '+error.message,'error');return;}
+  await adminDb.from('profiles').insert({id:data.user.id,name,email,role:'student',teacher_id:currentUser.id});
+  for(const cid of courseIds)await db.from('enrollments').insert({course_id:cid,student_id:data.user.id});
+  closeModal('modal-new-student');set('ns-name','');set('ns-email','');set('ns-pass','');
+  await loadStudents();toast(`Alumno creado ✓  —  Contraseña: ${pass}`,'success');
+}
+
+async function loadChat(){
+  const courseId=v('chat-course-select');if(!courseId)return;
+  if(chatChannel){db.removeChannel(chatChannel);chatChannel=null;}
+  const area=document.getElementById('chat-area');
+  area.innerHTML=`
+    <div class="chat-messages" id="chat-msgs"></div>
+    <div class="chat-input-area">
+      <input type="text" id="chat-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')sendChatMsg()">
+      <button class="btn btn-accent" onclick="sendChatMsg()">Enviar</button>
+    </div>`;
+  const{data:history}=await db.from('messages').select('*').eq('course_id',courseId).order('created_at').limit(50);
+  (history||[]).forEach(m=>appendMsg(m));scrollChat();
+  chatChannel=db.channel('chat-'+courseId)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`course_id=eq.${courseId}`},p=>{appendMsg(p.new);scrollChat();})
+    .subscribe();
+}
+
+function appendMsg(msg){
+  const msgs=document.getElementById('chat-msgs');if(!msgs)return;
+  const mine=msg.user_id===currentUser.id;
+  const time=new Date(msg.created_at).toLocaleTimeString('es-GT',{hour:'2-digit',minute:'2-digit'});
+  const el=document.createElement('div');
+  el.className=`chat-msg ${mine?'mine':'theirs'}`;
+  el.innerHTML=`${!mine?`<div class="chat-msg-sender">${msg.user_name}</div>`:''}${msg.text}<div class="chat-msg-time">${time}</div>`;
+  msgs.appendChild(el);
+}
+function scrollChat(){const m=document.getElementById('chat-msgs');if(m)m.scrollTop=m.scrollHeight;}
+async function sendChatMsg(){
+  const input=document.getElementById('chat-input');const text=input?.value?.trim();if(!text)return;
+  const courseId=v('chat-course-select');
+  await db.from('messages').insert({course_id:courseId,text,user_id:currentUser.id,user_name:currentProfile.name});
+  input.value='';
+}
+
+async function loadDashboard(){
+  const isT=currentProfile.role==='teacher';
+  document.getElementById('dash-greeting').textContent=`Hola, ${currentProfile.name.split(' ')[0]} 👋`;
+  await loadTasks();
+  const active=allTasks.filter(t=>!t.due_date||new Date(t.due_date)>=new Date()).length;
+  let ungraded=0;
+  if(isT){const{count}=await db.from('submissions').select('*',{count:'exact',head:true}).is('grade',null);ungraded=count||0;}
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="card"><div style="font-size:12px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em">Clases</div><div style="font-size:32px;font-weight:600;color:var(--accent);font-family:var(--mono)">${allCourses.length}</div></div>
+    <div class="card"><div style="font-size:12px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em">Tareas ${isT?'publicadas':'activas'}</div><div style="font-size:32px;font-weight:600;color:var(--amber);font-family:var(--mono)">${isT?allTasks.length:active}</div></div>
+    ${isT?`<div class="card"><div style="font-size:12px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em">Sin calificar</div><div style="font-size:32px;font-weight:600;color:var(--blue);font-family:var(--mono)">${ungraded}</div></div>`:''}`;
+  const recent=document.getElementById('dash-recent');
+  const show=allTasks.slice(0,4);
+  if(!show.length){recent.innerHTML=`<div style="font-size:13px;color:var(--text3)">No hay tareas recientes</div>`;return;}
+  recent.innerHTML=show.map(t=>{
+    const c=allCourses.find(x=>x.id===t.course_id);
+    const due=t.due_date?new Date(t.due_date+'T12:00:00').toLocaleDateString('es-GT',{day:'2-digit',month:'short'}):'—';
+    return `<div class="task-item" onclick="openTaskDetail('${t.id}')">
+      <div class="task-status" style="background:${c?.color||'#6ee7b7'}"></div>
+      <div class="task-info"><div class="task-title">${t.title}</div><div class="task-meta"><span>${c?.name||''}</span><span>· ${due}</span></div></div>
+    </div>`;
+  }).join('');
+}
+
+function showSection(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('section-'+id).classList.add('active');
+  const nav=document.getElementById('nav-'+id);if(nav)nav.classList.add('active');
+  const titles={dashboard:'Panel',courses:'Clases',tasks:'Tareas',chat:'Chat',submissions:'Entregas',students:'Alumnos'};
+  document.getElementById('topbar-title').textContent=titles[id]||id;
+  if(id==='courses')renderCoursesGrid();
+  if(id==='submissions')loadSubmissions();
+  if(id==='students')loadStudents();
+  if(id==='tasks'){loadTasks();document.getElementById('tasks-title').textContent='Tareas';document.getElementById('tasks-sub').textContent='Todas las tareas';}
+}
+
+function openModal(id){if(id==='modal-new-task')populateCourseSelects();if(id==='modal-new-student')populateCourseSelects();document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeModal(o.id);}));
+
+function handleTaskFile(e){taskFileToUpload=e.target.files[0];if(taskFileToUpload)document.getElementById('nt-file-name').textContent='📎 '+taskFileToUpload.name;}
+function handleSubmitFile(e){submitFileToUpload=e.target.files[0];if(submitFileToUpload)document.getElementById('td-file-name').textContent='📎 '+submitFileToUpload.name;}
+function selectColor(el){document.querySelectorAll('.color-opt').forEach(o=>o.classList.remove('selected'));el.classList.add('selected');selectedColor=el.dataset.color;}
+
+function v(id){return document.getElementById(id)?.value?.trim()||'';}
+function set(id,val){const el=document.getElementById(id);if(el)el.value=val;}
+function initials(name){return name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);}
+function hexAlpha(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return `rgba(${r},${g},${b},${a})`;}
+function getCourseEmoji(name){
+  const n=name.toLowerCase();
+  if(n.includes('python'))return'🐍';if(n.includes('c++')||n.includes('cpp'))return'⚙';
+  if(n.includes('excel')||n.includes('hoja'))return'📊';if(n.includes('mat'))return'📐';
+  if(n.includes('web')||n.includes('html'))return'🌐';if(n.includes('base')||n.includes('sql'))return'🗄';
+  return'📖';
+}
+function emptyState(icon,title,sub){return `<div class="empty-state"><div class="empty-icon">${icon}</div><div class="empty-title">${title}</div><div class="empty-sub">${sub}</div></div>`;}
+function toast(msg,type='success'){
+  const el=document.createElement('div');
+  el.className=`toast ${type}`;
+  el.innerHTML=`<span style="color:${type==='success'?'var(--accent)':'var(--red)'}">${type==='success'?'✓':'✕'}</span> ${msg}`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>el.remove(),5000);
+}
+</script>
+</body>
+</html>
