@@ -180,6 +180,7 @@
     <div class="field-group"><label>Correo</label><input type="email" id="login-email" placeholder="tu@correo.com"></div>
     <div class="field-group"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Entrar</button>
+    <div id="login-loading" style="display:none;text-align:center;margin-top:12px;font-size:13px;color:var(--text2)">Iniciando sesión...</div>
     <div class="login-toggle" id="login-toggle">¿Primera vez? <a onclick="toggleRegister()">Crear cuenta de profesor</a></div>
   </div>
 </div>
@@ -453,12 +454,12 @@ let chatChannel=null;
 
 window.onload=()=>{
   db.auth.onAuthStateChange(async(event,session)=>{
-    if(session?.user){
+    if(event==='INITIAL_SESSION'&&session?.user&&!currentProfile){
       currentUser=session.user;
       const{data}=await db.from('profiles').select('*').eq('id',session.user.id).single();
       currentProfile=data;
       if(currentProfile) showApp();
-    } else {
+    } else if(event==='SIGNED_OUT'){
       currentUser=null;currentProfile=null;
       document.getElementById('app').style.display='none';
       document.getElementById('login-screen').style.display='flex';
@@ -481,16 +482,34 @@ function toggleRegister(){
 async function doLogin(){
   const email=v('login-email'),pass=v('login-pass');
   if(!email||!pass){toast('Completa los campos','error');return;}
-  if(isRegisterMode){
-    const name=v('login-name');
-    if(!name){toast('Ingresa tu nombre','error');return;}
-    const{data,error}=await db.auth.signUp({email,password:pass});
-    if(error){toast(error.message,'error');return;}
-    await db.from('profiles').insert({id:data.user.id,name,email,role:'teacher'});
-    toast('Cuenta creada ✓','success');
-  } else {
-    const{error}=await db.auth.signInWithPassword({email,password:pass});
-    if(error){toast('Correo o contraseña incorrectos','error');}
+  const btn=document.getElementById('login-btn');
+  const loading=document.getElementById('login-loading');
+  btn.disabled=true;btn.style.opacity='0.6';loading.style.display='block';
+  try{
+    if(isRegisterMode){
+      const name=v('login-name');
+      if(!name){toast('Ingresa tu nombre','error');return;}
+      const{data,error}=await db.auth.signUp({email,password:pass});
+      if(error){toast(error.message,'error');return;}
+      await db.from('profiles').insert({id:data.user.id,name,email,role:'teacher'});
+      currentUser=data.user;
+      const{data:prof}=await db.from('profiles').select('*').eq('id',data.user.id).single();
+      currentProfile=prof;
+      toast('Cuenta creada ✓','success');
+      showApp();
+    } else {
+      const{data,error}=await db.auth.signInWithPassword({email,password:pass});
+      if(error){toast('Correo o contraseña incorrectos','error');return;}
+      currentUser=data.user;
+      const{data:prof}=await db.from('profiles').select('*').eq('id',data.user.id).single();
+      currentProfile=prof;
+      if(!currentProfile){toast('No se encontró el perfil de usuario','error');return;}
+      showApp();
+    }
+  } catch(e){
+    toast('Error: '+e.message,'error');
+  } finally {
+    btn.disabled=false;btn.style.opacity='1';loading.style.display='none';
   }
 }
 
