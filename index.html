@@ -417,6 +417,32 @@
 </div>
 
 
+
+<!-- Edit Course Modal -->
+<div class="modal-overlay" id="modal-edit-course">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header"><h3>Editar clase</h3><button class="modal-close" onclick="closeModal('modal-edit-course')">✕</button></div>
+    <input type="hidden" id="edit-course-id">
+    <div class="field-group"><label>Nombre</label><input type="text" id="edit-course-name" placeholder="Nombre de la clase"></div>
+    <div class="field-group"><label>Descripción (opcional)</label><textarea id="edit-course-desc" placeholder="Descripción breve..."></textarea></div>
+    <div class="field-group">
+      <label>Color</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="color-opt selected" data-color="#6ee7b7" data-target="edit" style="background:#6ee7b7" onclick="selectEditColor(this)"></div>
+        <div class="color-opt" data-color="#60a5fa" data-target="edit" style="background:#60a5fa" onclick="selectEditColor(this)"></div>
+        <div class="color-opt" data-color="#f87171" data-target="edit" style="background:#f87171" onclick="selectEditColor(this)"></div>
+        <div class="color-opt" data-color="#fbbf24" data-target="edit" style="background:#fbbf24" onclick="selectEditColor(this)"></div>
+        <div class="color-opt" data-color="#a78bfa" data-target="edit" style="background:#a78bfa" onclick="selectEditColor(this)"></div>
+        <div class="color-opt" data-color="#fb923c" data-target="edit" style="background:#fb923c" onclick="selectEditColor(this)"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-course')">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveEditCourse()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Edit Student Modal -->
 <div class="modal-overlay" id="modal-edit-student">
   <div class="modal" style="max-width:400px">
@@ -562,7 +588,11 @@ function renderCoursesGrid(){
       <div style="height:3px;background:${c.color||'#6ee7b7'};position:absolute;top:0;left:0;right:0;border-radius:var(--radius-lg) var(--radius-lg) 0 0"></div>
       <div class="card-course-header">
         <div class="course-icon" style="background:${hexAlpha(c.color||'#6ee7b7',.12)}">${getCourseEmoji(c.name)}</div>
-        <div><h3>${c.name}</h3><div class="meta">${c.description||'Sin descripción'}</div></div>
+        <div style="flex:1;min-width:0"><h3>${c.name}</h3><div class="meta">${c.description||'Sin descripción'}</div></div>
+        <div style="display:flex;gap:6px;flex-shrink:0" onclick="event.stopPropagation()">
+          <button class="btn btn-ghost btn-sm" onclick="openEditCourse('${c.id}')">Editar</button>
+          <button class="btn btn-sm" style="background:var(--red-dim);color:var(--red);border:1px solid rgba(248,113,113,0.25)" onclick="deleteCourse('${c.id}',this.dataset.name)" data-name="${c.name}">✕</button>
+        </div>
       </div>
       <div class="stats-row">
         <div class="stat"><strong id="ct-${c.id}">—</strong> tareas</div>
@@ -627,7 +657,7 @@ async function renderTasks(){
   if(!isT&&currentTaskFilter!=='all'){
     const{data:subs}=await db.from('submissions').select('task_id,grade').eq('student_id',currentUser.id);
     const sm={};(subs||[]).forEach(s=>sm[s.task_id]=s);
-    tasks=allTasks.filter(t=>{
+    tasks=tasks.filter(t=>{
       const s=sm[t.id];
       if(currentTaskFilter==='pending')return!s;
       if(currentTaskFilter==='submitted')return s&&s.grade===null;
@@ -822,6 +852,50 @@ async function saveEditStudent(){
   await db.from('enrollments').delete().eq('student_id',id);
   for(const cid of newCourses)await db.from('enrollments').insert({course_id:cid,student_id:id});
   closeModal('modal-edit-student');await loadCourses();await loadStudents();toast('Alumno actualizado ✓','success');
+}
+
+let editCourseColor = '#6ee7b7';
+
+function selectEditColor(el){
+  document.querySelectorAll('[data-target="edit"]').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  editCourseColor=el.dataset.color;
+}
+
+async function openEditCourse(id){
+  const c=allCourses.find(x=>x.id===id);if(!c)return;
+  set('edit-course-id',id);
+  set('edit-course-name',c.name);
+  set('edit-course-desc',c.description||'');
+  editCourseColor=c.color||'#6ee7b7';
+  document.querySelectorAll('[data-target="edit"]').forEach(o=>{
+    o.classList.toggle('selected', o.dataset.color===editCourseColor);
+  });
+  openModal('modal-edit-course');
+}
+
+async function saveEditCourse(){
+  const id=v('edit-course-id'),name=v('edit-course-name'),desc=v('edit-course-desc');
+  if(!name){toast('Ingresa el nombre','error');return;}
+  await db.from('courses').update({name,description:desc,color:editCourseColor}).eq('id',id);
+  closeModal('modal-edit-course');
+  await loadCourses();
+  renderCoursesGrid();
+  toast('Clase actualizada ✓','success');
+}
+
+async function deleteCourse(id,name){
+  if(!confirm('¿Eliminar la clase "'+name+'"? Se eliminarán todas sus tareas y entregas.'))return;
+  const{data:tasks}=await db.from('tasks').select('id').eq('course_id',id);
+  for(const t of tasks||[]){
+    await db.from('submissions').delete().eq('task_id',t.id);
+  }
+  await db.from('tasks').delete().eq('course_id',id);
+  await db.from('enrollments').delete().eq('course_id',id);
+  await db.from('messages').delete().eq('course_id',id);
+  await db.from('courses').delete().eq('id',id);
+  await loadCourses();
+  toast('Clase eliminada','success');
 }
 async function deleteStudent(id,name){
   if(!confirm('¿Eliminar al alumno '+name+'? Esta acción no se puede deshacer.'))return;
