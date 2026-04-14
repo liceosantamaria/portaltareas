@@ -339,6 +339,7 @@
     <div class="field-group"><label>Nombre completo</label><input type="text" id="ns-name" placeholder="Nombre del alumno"></div>
     <div class="field-group"><label>Correo</label><input type="email" id="ns-email" placeholder="alumno@correo.com"></div>
     <div class="field-group"><label>Contraseña inicial</label><input type="text" id="ns-pass" placeholder="Ej. alumno123"></div>
+    <div class="field-group"><label>Grado</label><input type="text" id="ns-grade" placeholder="Ej. 5to PC, 4to Perito Contador"></div>
     <div class="field-group">
       <label>Clases inscritas</label>
       <div id="ns-courses" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px"></div>
@@ -414,6 +415,21 @@
   </div>
 </div>
 
+
+<!-- Edit Student Modal -->
+<div class="modal-overlay" id="modal-edit-student">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header"><h3>Editar alumno</h3><button class="modal-close" onclick="closeModal('modal-edit-student')">✕</button></div>
+    <input type="hidden" id="edit-student-id">
+    <div class="field-group"><label>Nombre completo</label><input type="text" id="edit-student-name" placeholder="Nombre del alumno"></div>
+    <div class="field-group"><label>Grado</label><input type="text" id="edit-student-grade" placeholder="Ej. 5to PC"></div>
+    <div class="field-group"><label>Nueva contraseña (opcional)</label><input type="text" id="edit-student-pass" placeholder="Dejar vacío para no cambiar"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-student')">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveEditStudent()">Guardar</button>
+    </div>
+  </div>
+</div>
 <script>
 const SUPA_URL='https://rkructjezzlpwlqvsrdv.supabase.co';
 const SUPA_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrcnVjdGplenpscHdscXZzcmR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4OTE5NjUsImV4cCI6MjA5MTQ2Nzk2NX0.emUiazok4NMxIN0X_ddVDIUOuhitOMGNZq1CKPmj0Ck';
@@ -474,7 +490,7 @@ async function doLogin(){
   }
 }
 
-async function doLogout(){await db.auth.signOut();allCourses=[];allTasks=[];}
+async function doLogout(){currentUser=null;currentProfile=null;allCourses=[];allTasks=[];document.getElementById("app").style.display="none";document.getElementById("login-screen").style.display="flex";set("login-email","");set("login-pass","");await db.auth.signOut();}
 
 async function showApp(){
   document.getElementById('login-screen').style.display='none';
@@ -482,11 +498,11 @@ async function showApp(){
   const isT=currentProfile.role==='teacher';
   const ini=currentProfile.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
   document.getElementById('sb-name').textContent=currentProfile.name;
-  document.getElementById('sb-role').textContent=isT?'profesor':'alumno';
+  document.getElementById('sb-role').textContent=isT?'profesor':(currentProfile.grade_level||'alumno');
   document.getElementById('sb-avatar').textContent=ini;
   if(isT){
     document.getElementById('sb-avatar').classList.add('teacher');
-    document.getElementById('teacher-nav').style.display='block';
+    document.getElementById('teacher-nav').style.display='block';document.getElementById('btn-new-course').style.display='flex';document.getElementById('btn-new-task').style.display='flex';
     document.getElementById('btn-new-course').style.display='flex';
     document.getElementById('btn-new-task').style.display='flex';
   } else {
@@ -606,7 +622,9 @@ async function renderTasks(){
           ${isT?`<span id="sc-${t.id}">· cargando...</span>`:''}
         </div>
       </div>
-      <div class="task-actions">${t.material_url?`<a class="btn btn-ghost btn-sm" href="${t.material_url}" target="_blank" onclick="event.stopPropagation()">↓</a>`:''}</div>
+      <div class="task-actions">${t.material_url?`<a class="btn btn-ghost btn-sm" href="${t.material_url}" target="_blank" onclick="event.stopPropagation()">↓</a>`:''}
+        ${isT?`<button class="btn btn-sm" style="background:var(--red-dim);color:var(--red);border:1px solid rgba(248,113,113,0.25)" onclick="event.stopPropagation();deleteTask('${t.id}')">✕</button>`:''}
+      </div>
     </div>`;
   }).join('');
   if(isT)tasks.forEach(async t=>{
@@ -754,6 +772,35 @@ async function loadSubmissions(){
   }).join('');
 }
 
+
+async function openEditStudent(id,name){
+  set('edit-student-id',id);set('edit-student-name',name);set('edit-student-pass','');
+  const{data}=await db.from('profiles').select('grade_level').eq('id',id).single();
+  set('edit-student-grade',data?.grade_level||'');
+  openModal('modal-edit-student');
+}
+async function saveEditStudent(){
+  const id=v('edit-student-id'),name=v('edit-student-name'),grade=v('edit-student-grade'),pass=v('edit-student-pass');
+  if(!name){toast('Ingresa el nombre','error');return;}
+  await db.from('profiles').update({name,grade_level:grade||null}).eq('id',id);
+  if(pass){
+    const{error}=await adminDb.auth.admin.updateUserById(id,{password:pass});
+    if(error){toast('Error cambiando contraseña: '+error.message,'error');return;}
+  }
+  closeModal('modal-edit-student');await loadStudents();toast('Alumno actualizado ✓','success');
+}
+async function deleteTask(taskId){
+  if(!confirm('¿Eliminar esta tarea? También se eliminarán todas las entregas.'))return;
+  await db.from('submissions').delete().eq('task_id',taskId);
+  const task=allTasks.find(t=>t.id===taskId);
+  if(task?.material_url){
+    const path=task.material_url.split('/files/')[1];
+    if(path)await db.storage.from('files').remove([decodeURIComponent(path)]);
+  }
+  await db.from('tasks').delete().eq('id',taskId);
+  await loadTasks(currentCourseTasks);toast('Tarea eliminada','success');
+}
+
 async function loadStudents(){
   const{data:students}=await db.from('profiles').select('*').eq('role','student').eq('teacher_id',currentUser.id);
   const list=document.getElementById('students-list');
@@ -765,20 +812,21 @@ async function loadStudents(){
   list.innerHTML=students.map(s=>`
     <div class="submission-item">
       <div class="avatar" style="width:36px;height:36px;font-size:12px">${initials(s.name)}</div>
-      <div class="sub-info"><div class="sub-name">${s.name}</div><div class="sub-meta">${s.email}</div></div>
+      <div class="sub-info"><div class="sub-name">${s.name}</div><div class="sub-meta">${s.email}${s.grade_level?" · "+s.grade_level:""}</div></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">${s.courseIds.map(cid=>{const c=allCourses.find(x=>x.id===cid);return c?`<span class="tag">${c.name}</span>`:''}).join('')}</div>
+      <button class="btn btn-ghost btn-sm" onclick="openEditStudent('${s.id}','${s.name.replace(/'/g,"\\'")}')">Editar</button>
     </div>`).join('');
 }
 
 async function createStudent(){
-  const name=v('ns-name'),email=v('ns-email'),pass=v('ns-pass');
+  const name=v('ns-name'),email=v('ns-email'),pass=v('ns-pass'),grade=v('ns-grade');
   if(!name||!email||!pass){toast('Completa todos los campos','error');return;}
   const courseIds=[...document.querySelectorAll('.ns-cb:checked')].map(cb=>cb.value);
   const{data,error}=await adminDb.auth.admin.createUser({email,password:pass,email_confirm:true});
   if(error){toast('Error: '+error.message,'error');return;}
-  await adminDb.from('profiles').insert({id:data.user.id,name,email,role:'student',teacher_id:currentUser.id});
+  await adminDb.from('profiles').insert({id:data.user.id,name,email,role:'student',teacher_id:currentUser.id,grade_level:grade||null});
   for(const cid of courseIds)await db.from('enrollments').insert({course_id:cid,student_id:data.user.id});
-  closeModal('modal-new-student');set('ns-name','');set('ns-email','');set('ns-pass','');
+  closeModal('modal-new-student');set('ns-name','');set('ns-email','');set('ns-pass','');set('ns-grade','');
   await loadStudents();toast(`Alumno creado ✓  —  Contraseña: ${pass}`,'success');
 }
 
