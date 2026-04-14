@@ -598,7 +598,11 @@ async function createCourse(){
 
 function openCourse(id){showSection('tasks');filterByClass(id);}
 function filterByClass(id){
-  currentCourseTasks=id;loadTasks(id);
+  currentCourseTasks=id;
+  currentTaskFilter='all';
+  document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));
+  const firstTab=document.querySelector('.tabs .tab');if(firstTab)firstTab.classList.add('active');
+  loadTasks(id);
   const c=allCourses.find(x=>x.id===id);
   if(c){document.getElementById('tasks-title').textContent=c.name;document.getElementById('tasks-sub').textContent='Tareas de esta clase';}
 }
@@ -619,7 +623,7 @@ async function loadTasks(courseId=null){
 async function renderTasks(){
   const list=document.getElementById('tasks-list');
   const isT=currentProfile.role==='teacher';
-  let tasks=allTasks;
+  let tasks=currentCourseTasks?allTasks.filter(t=>t.course_id===currentCourseTasks):allTasks;
   if(!isT&&currentTaskFilter!=='all'){
     const{data:subs}=await db.from('submissions').select('task_id,grade').eq('student_id',currentUser.id);
     const sm={};(subs||[]).forEach(s=>sm[s.task_id]=s);
@@ -937,7 +941,7 @@ function showSection(id){
   if(id==='courses')renderCoursesGrid();
   if(id==='submissions')loadSubmissions();
   if(id==='students')loadStudents();
-  if(id==='tasks'){loadTasks();document.getElementById('tasks-title').textContent='Tareas';document.getElementById('tasks-sub').textContent='Todas las tareas';}
+  if(id==='tasks'){currentTaskFilter='all';currentCourseTasks=null;document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));const ft=document.querySelector('.tabs .tab');if(ft)ft.classList.add('active');loadTasks();document.getElementById('tasks-title').textContent='Tareas';document.getElementById('tasks-sub').textContent='Todas las tareas';}
 }
 
 function openModal(id){if(id==='modal-new-task')populateCourseSelects();if(id==='modal-new-student')populateCourseSelects();document.getElementById(id).classList.add('open');}
