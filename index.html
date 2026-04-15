@@ -886,10 +886,16 @@ async function saveEditCourse(){
 
 async function deleteCourse(id,name){
   if(!confirm('¿Eliminar la clase "'+name+'"? Se eliminarán todas sus tareas y entregas.'))return;
-  const{data:tasks}=await db.from('tasks').select('id').eq('course_id',id);
-  for(const t of tasks||[]){
-    await db.from('submissions').delete().eq('task_id',t.id);
+  const{data:tasks}=await db.from('tasks').select('id,material_url').eq('course_id',id);
+  const taskIds=(tasks||[]).map(t=>t.id);
+  const taskUrls=(tasks||[]).map(t=>t.material_url);
+  let subUrls=[];
+  if(taskIds.length){
+    const{data:subs}=await db.from('submissions').select('file_url').in('task_id',taskIds);
+    subUrls=(subs||[]).map(s=>s.file_url);
+    await db.from('submissions').delete().in('task_id',taskIds);
   }
+  await deleteStorageFiles([...taskUrls,...subUrls]);
   await db.from('tasks').delete().eq('course_id',id);
   await db.from('enrollments').delete().eq('course_id',id);
   await db.from('messages').delete().eq('course_id',id);
@@ -899,6 +905,9 @@ async function deleteCourse(id,name){
 }
 async function deleteStudent(id,name){
   if(!confirm('¿Eliminar al alumno '+name+'? Esta acción no se puede deshacer.'))return;
+  const{data:subs}=await db.from('submissions').select('file_url').eq('student_id',id);
+  const subUrls=(subs||[]).map(s=>s.file_url);
+  await deleteStorageFiles(subUrls);
   await db.from('enrollments').delete().eq('student_id',id);
   await db.from('submissions').delete().eq('student_id',id);
   await adminDb.from('profiles').delete().eq('id',id);
@@ -908,12 +917,11 @@ async function deleteStudent(id,name){
 
 async function deleteTask(taskId){
   if(!confirm('¿Eliminar esta tarea? También se eliminarán todas las entregas.'))return;
-  await db.from('submissions').delete().eq('task_id',taskId);
   const task=allTasks.find(t=>t.id===taskId);
-  if(task?.material_url){
-    const path=task.material_url.split('/files/')[1];
-    if(path)await db.storage.from('files').remove([decodeURIComponent(path)]);
-  }
+  const{data:subs}=await db.from('submissions').select('file_url').eq('task_id',taskId);
+  const subUrls=(subs||[]).map(s=>s.file_url);
+  await db.from('submissions').delete().eq('task_id',taskId);
+  await deleteStorageFiles([task?.material_url,...subUrls]);
   await db.from('tasks').delete().eq('id',taskId);
   await loadTasks(currentCourseTasks);toast('Tarea eliminada','success');
 }
@@ -1027,6 +1035,19 @@ function handleSubmitFile(e){submitFileToUpload=e.target.files[0];if(submitFileT
 function selectColor(el){document.querySelectorAll('.color-opt').forEach(o=>o.classList.remove('selected'));el.classList.add('selected');selectedColor=el.dataset.color;}
 
 
+
+function getStoragePath(url){
+  if(!url)return null;
+  const marker='/files/';
+  const idx=url.indexOf(marker);
+  if(idx===-1)return null;
+  return decodeURIComponent(url.slice(idx+marker.length));
+}
+
+async function deleteStorageFiles(urls){
+  const paths=urls.filter(Boolean).map(getStoragePath).filter(Boolean);
+  if(paths.length)await db.storage.from('files').remove(paths);
+}
 function sanitizeFileName(name){
   return name
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
