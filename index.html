@@ -227,6 +227,21 @@
       <div class="section active" id="section-dashboard">
         <div class="page-header"><div><h2 id="dash-greeting">Bienvenido</h2><p>Resumen de tu actividad</p></div></div>
         <div class="grid-3" id="dash-stats"></div>
+        <div id="storage-indicator" style="display:none;margin-top:16px">
+          <div class="card" style="padding:16px 20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em">Almacenamiento</div>
+              <div style="font-size:12px;color:var(--text2)" id="storage-text">Calculando...</div>
+            </div>
+            <div class="progress-bar" style="height:6px">
+              <div class="progress-fill" id="storage-fill" style="width:0%;transition:width 0.6s"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--text3)">
+              <span id="storage-used">— MB usados</span>
+              <span>1 GB disponible</span>
+            </div>
+          </div>
+        </div>
         <div style="margin-top:28px">
           <h3 style="font-size:15px;font-weight:500;margin-bottom:14px;color:var(--text2)">Tareas recientes</h3>
           <div id="dash-recent"></div>
@@ -368,19 +383,13 @@
     </div>
     <div id="td-submit-area">
       <div class="divider"></div>
-      <div style="font-size:13px;font-weight:500;margin-bottom:12px">Tu entrega</div>
-      <div id="td-current-sub" style="display:none">
-        <div class="material-item" style="margin-bottom:12px">
-          <div class="file-icon" style="background:var(--accent-dim)">✓</div>
-          <div class="file-info"><div class="file-name" id="td-sub-name">Entregado</div><div class="file-meta" id="td-sub-meta"></div></div>
-          <a class="btn btn-ghost btn-sm" id="td-sub-link" href="#" target="_blank">↓ Ver</a>
-        </div>
-        <div id="td-grade-display" style="display:none">
-          <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Calificación</div>
-          <div style="font-size:28px;font-weight:600;color:var(--accent);font-family:var(--mono)" id="td-grade-val"></div>
-          <div style="font-size:13px;color:var(--text2);margin-top:6px" id="td-grade-comment"></div>
-        </div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:12px">Mis entregas</div>
+      <div id="td-grade-display" style="display:none;margin-bottom:14px">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Calificación</div>
+        <div style="font-size:28px;font-weight:600;color:var(--accent);font-family:var(--mono)" id="td-grade-val"></div>
+        <div style="font-size:13px;color:var(--text2);margin-top:6px" id="td-grade-comment"></div>
       </div>
+      <div id="td-my-subs-list" style="margin-bottom:12px"></div>
       <div id="td-upload-area">
         <div class="drop-zone" id="td-drop" onclick="document.getElementById('td-file').click()">
           <input type="file" id="td-file" onchange="handleSubmitFile(event)">
@@ -392,7 +401,7 @@
           <div class="progress-bar"><div class="progress-fill" id="td-prog-fill" style="width:0%"></div></div>
           <div style="font-size:11px;color:var(--text3);margin-top:4px" id="td-prog-text">Subiendo...</div>
         </div>
-        <button class="btn btn-accent" onclick="submitTask()" style="margin-top:12px;width:100%">Entregar tarea</button>
+        <button class="btn btn-accent" onclick="submitTask()" style="margin-top:12px;width:100%">⬆ Agregar entrega</button>
       </div>
     </div>
     <div id="td-grade-area" style="display:none">
@@ -745,35 +754,72 @@ async function openTaskDetail(taskId){
 }
 
 async function loadMySubmission(taskId){
-  const{data}=await db.from('submissions').select('*').eq('task_id',taskId).eq('student_id',currentUser.id).maybeSingle();
-  const curr=document.getElementById('td-current-sub'),up=document.getElementById('td-upload-area');
-  if(data){
-    curr.style.display='block';
-    document.getElementById('td-sub-name').textContent=data.file_name||'Archivo entregado';
-    document.getElementById('td-sub-link').href=data.file_url||'#';
-    document.getElementById('td-sub-meta').textContent=`Entregado el ${new Date(data.submitted_at).toLocaleDateString('es-GT')}`;
-    if(data.grade!==null&&data.grade!==undefined){
-      document.getElementById('td-grade-display').style.display='block';
-      document.getElementById('td-grade-val').textContent=data.grade+'/100';
-      document.getElementById('td-grade-comment').textContent=data.comment||'';
-    } else document.getElementById('td-grade-display').style.display='none';
-    up.style.display='none';
+  const{data:subs}=await db.from('submissions').select('*')
+    .eq('task_id',taskId).eq('student_id',currentUser.id)
+    .order('submitted_at',{ascending:false});
+
+  const subsList=document.getElementById('td-my-subs-list');
+  const gradeEl=document.getElementById('td-grade-display');
+
+  if(subs?.length){
+    subsList.innerHTML=subs.map((s,i)=>`
+      <div class="material-item" style="margin-bottom:6px">
+        <div class="file-icon" style="background:var(--accent-dim);font-size:12px">${subs.length-i}</div>
+        <div class="file-info">
+          <div class="file-name">${s.file_name||'Archivo entregado'}</div>
+          <div class="file-meta">${new Date(s.submitted_at).toLocaleDateString('es-GT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+        </div>
+        <a class="btn btn-ghost btn-sm" href="${s.file_url}" target="_blank">↓</a>
+      </div>`).join('');
+
+    const latest=subs[0];
+    if(latest.grade!==null&&latest.grade!==undefined){
+      gradeEl.style.display='block';
+      document.getElementById('td-grade-val').textContent=latest.grade+'/100';
+      document.getElementById('td-grade-comment').textContent=latest.comment||'';
+    } else gradeEl.style.display='none';
   } else {
-    curr.style.display='none';up.style.display='block';
-    document.getElementById('td-file-name').textContent='';submitFileToUpload=null;
+    subsList.innerHTML='';
+    gradeEl.style.display='none';
   }
+
+  document.getElementById('td-upload-area').style.display='block';
+  document.getElementById('td-file-name').textContent='';
+  submitFileToUpload=null;
 }
 
 async function loadSubsForTask(taskId){
-  const{data:subs}=await db.from('submissions').select('*').eq('task_id',taskId);
+  const{data:subs}=await db.from('submissions').select('*').eq('task_id',taskId).order('submitted_at',{ascending:false});
   const el=document.getElementById('td-subs-for-grade');
   if(!subs?.length){el.innerHTML=`<div style="font-size:13px;color:var(--text3)">Sin entregas aún</div>`;return;}
-  el.innerHTML=subs.map(s=>`
-    <div class="submission-item">
-      <div class="sub-info"><div class="sub-name">${s.student_name}</div><div class="sub-meta">${s.file_name||'archivo'} · ${new Date(s.submitted_at).toLocaleDateString('es-GT')}</div></div>
-      ${s.grade!==null?`<div class="sub-grade">${s.grade}</div>`:`<span class="badge badge-amber">Pendiente</span>`}
-      <a class="btn btn-ghost btn-sm" href="${s.file_url}" target="_blank">↓</a>
-      <button class="btn btn-accent btn-sm" onclick="openGradeModal('${s.id}','${s.student_name}')">Calificar</button>
+
+  // Group by student
+  const byStudent={};
+  subs.forEach(s=>{
+    if(!byStudent[s.student_id])byStudent[s.student_id]={name:s.student_name,subs:[],grade:s.grade,gradeId:s.id,comment:s.comment};
+    byStudent[s.student_id].subs.push(s);
+    if(s.grade!==null&&s.grade!==undefined){byStudent[s.student_id].grade=s.grade;byStudent[s.student_id].gradeId=s.id;byStudent[s.student_id].comment=s.comment;}
+  });
+
+  el.innerHTML=Object.values(byStudent).map(st=>`
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:13.5px;font-weight:500">${st.name}</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${st.grade!==null&&st.grade!==undefined?`<div class="sub-grade" style="font-size:16px">${st.grade}/100</div>`:`<span class="badge badge-amber">Sin calificar</span>`}
+          <button class="btn btn-accent btn-sm" onclick="openGradeModal('${st.gradeId}','${st.name}')">Calificar</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        ${st.subs.map((s,i)=>`
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)">
+            <span style="color:var(--text3);font-family:var(--mono)">#${st.subs.length-i}</span>
+            <span style="flex:1">${s.file_name||'archivo'}</span>
+            <span>${new Date(s.submitted_at).toLocaleDateString('es-GT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
+            <a class="btn btn-ghost btn-sm" href="${s.file_url}" target="_blank">↓</a>
+          </div>`).join('')}
+      </div>
+      ${st.comment?`<div style="font-size:12px;color:var(--text2);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">💬 ${st.comment}</div>`:''}
     </div>`).join('');
 }
 
@@ -790,7 +836,9 @@ async function submitTask(){
   pf.style.width='100%';pt.textContent='¡Entregado!';
   setTimeout(()=>pw.style.display='none',1000);
   submitFileToUpload=null;
-  await loadMySubmission(currentTaskDetail.id);toast('Tarea entregada ✓','success');
+  document.getElementById('td-file-name').textContent='';
+  document.getElementById('td-file').value='';
+  await loadMySubmission(currentTaskDetail.id);toast('Entrega agregada ✓','success');
 }
 
 function openGradeModal(subId,name){
@@ -989,6 +1037,63 @@ async function sendChatMsg(){
   input.value='';
 }
 
+async function loadStorageUsage(){
+  try{
+    const indicator=document.getElementById('storage-indicator');
+    indicator.style.display='block';
+
+    // Get all file URLs from tasks and submissions
+    const{data:tasks}=await db.from('tasks').select('material_url').eq('teacher_id',currentUser.id).not('material_url','is',null);
+    const{data:subs}=await db.from('submissions').select('file_url');
+
+    const allUrls=[...(tasks||[]).map(t=>t.material_url),...(subs||[]).map(s=>s.file_url)].filter(Boolean);
+
+    // Estimate size by fetching HEAD for each file (sample first 20 to avoid too many requests)
+    const sample=allUrls.slice(0,30);
+    let totalBytes=0;
+    let counted=0;
+
+    await Promise.all(sample.map(async url=>{
+      try{
+        const r=await fetch(url,{method:'HEAD'});
+        const len=r.headers.get('content-length');
+        if(len){totalBytes+=parseInt(len);counted++;}
+      }catch(e){}
+    }));
+
+    // Extrapolate if we sampled
+    if(counted>0&&allUrls.length>sample.length){
+      totalBytes=Math.round(totalBytes/counted*allUrls.length);
+    }
+
+    const LIMIT_GB=1;
+    const LIMIT_BYTES=LIMIT_GB*1024*1024*1024;
+    const pct=Math.min(Math.round(totalBytes/LIMIT_BYTES*100),100);
+    const usedMB=(totalBytes/1024/1024).toFixed(1);
+    const usedGB=(totalBytes/1024/1024/1024).toFixed(3);
+
+    const fill=document.getElementById('storage-fill');
+    const text=document.getElementById('storage-text');
+    const used=document.getElementById('storage-used');
+
+    fill.style.width=pct+'%';
+    fill.style.background=pct>80?'var(--red)':pct>50?'var(--amber)':'var(--accent)';
+    text.textContent=pct+'% usado';
+    used.textContent=usedMB>1024?usedGB+' GB usados':usedMB+' MB usados'+'  ('+allUrls.length+' archivos)';
+
+    if(pct>80){
+      text.style.color='var(--red)';
+      if(pct>90)toast('⚠ Storage al '+pct+'% — considera eliminar tareas antiguas','error');
+    } else if(pct>50){
+      text.style.color='var(--amber)';
+    } else {
+      text.style.color='var(--accent)';
+    }
+  }catch(e){
+    console.error('Storage check error:',e);
+  }
+}
+
 async function loadDashboard(){
   const isT=currentProfile.role==='teacher';
   document.getElementById('dash-greeting').textContent=`Hola, ${currentProfile.name.split(' ')[0]} 👋`;
@@ -1000,6 +1105,7 @@ async function loadDashboard(){
     <div class="card"><div style="font-size:12px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em">Clases</div><div style="font-size:32px;font-weight:600;color:var(--accent);font-family:var(--mono)">${allCourses.length}</div></div>
     <div class="card"><div style="font-size:12px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em">Tareas ${isT?'publicadas':'activas'}</div><div style="font-size:32px;font-weight:600;color:var(--amber);font-family:var(--mono)">${isT?allTasks.length:active}</div></div>
     ${isT?`<div class="card"><div style="font-size:12px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em">Sin calificar</div><div style="font-size:32px;font-weight:600;color:var(--blue);font-family:var(--mono)">${ungraded}</div></div>`:''}`;
+  if(isT) loadStorageUsage();
   const recent=document.getElementById('dash-recent');
   const show=allTasks.slice(0,4);
   if(!show.length){recent.innerHTML=`<div style="font-size:13px;color:var(--text3)">No hay tareas recientes</div>`;return;}
