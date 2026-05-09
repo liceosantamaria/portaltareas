@@ -3,593 +3,1324 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Exámenes — Liceo Santa María</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-<script>
-  window.JSONBIN_KEY = "$2a$10$OB7oQ1plqhl6U1zTDwo6TuVzfJz5ReX4QSxwVz.dW01lNWPd4Br5K";
-  window.JSONBIN_BIN = "699fb9c4ae596e708f4ab394";
-</script>
+<title>Aula Digital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:'Segoe UI',sans-serif;background:#0a0a1a;color:#fff;}
-  input,textarea,select{font-family:'Segoe UI',sans-serif;}
+  :root {
+    --bg:#0f0f11;--bg2:#17171b;--bg3:#1e1e24;--bg4:#26262e;--border:#2e2e38;
+    --text:#f0f0f4;--text2:#9898a8;--text3:#5a5a6e;
+    --accent:#6ee7b7;--accent2:#34d399;--accent-dim:rgba(110,231,183,0.12);--accent-dim2:rgba(110,231,183,0.06);
+    --red:#f87171;--red-dim:rgba(248,113,113,0.12);--amber:#fbbf24;--amber-dim:rgba(251,191,36,0.12);
+    --blue:#60a5fa;--blue-dim:rgba(96,165,250,0.12);--purple:#a78bfa;--purple-dim:rgba(167,139,250,0.12);
+    --radius:10px;--radius-lg:16px;--font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.6}
+
+  #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);position:relative;overflow:hidden}
+  #login-screen::before{content:'';position:fixed;width:600px;height:600px;background:radial-gradient(circle,rgba(110,231,183,0.07) 0%,transparent 70%);top:-100px;right:-100px;pointer-events:none}
+  .login-box{width:380px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:40px 36px;position:relative;z-index:1}
+  .login-logo{font-family:var(--mono);font-size:13px;color:var(--accent);letter-spacing:0.12em;margin-bottom:28px;display:flex;align-items:center;gap:8px}
+  .login-logo-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block}
+  .login-box h1{font-size:22px;font-weight:600;margin-bottom:6px}
+  .login-box>p{font-size:13px;color:var(--text2);margin-bottom:28px}
+  .login-toggle{text-align:center;margin-top:20px;font-size:13px;color:var(--text2)}
+  .login-toggle a{color:var(--accent);text-decoration:none;font-weight:500;cursor:pointer}
+
+  .field-group{margin-bottom:16px}
+  .field-group label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase}
+  input[type=text],input[type=email],input[type=password],input[type=date],input[type=number],select,textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;color:var(--text);font-family:var(--font);font-size:14px;outline:none;transition:border-color 0.2s}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+  select option{background:var(--bg3)}
+  textarea{resize:vertical;min-height:80px}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 18px;border-radius:var(--radius);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;border:none;transition:all 0.15s}
+  .btn-primary{background:var(--accent);color:#0a1a13;width:100%;padding:12px;font-size:15px}
+  .btn-primary:hover{background:var(--accent2)}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text2)}
+  .btn-ghost:hover{border-color:var(--text3);color:var(--text);background:var(--bg3)}
+  .btn-accent{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(110,231,183,0.25)}
+  .btn-accent:hover{background:rgba(110,231,183,0.2)}
+  .btn-sm{padding:6px 12px;font-size:12px;border-radius:7px}
+
+  #app{display:none;min-height:100vh}
+  .sidebar{position:fixed;left:0;top:0;width:240px;height:100vh;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;overflow-y:auto}
+  .sidebar-header{padding:22px 20px 16px;border-bottom:1px solid var(--border)}
+  .sidebar-logo{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:0.1em;display:flex;align-items:center;gap:6px;margin-bottom:14px}
+  .sidebar-user{display:flex;align-items:center;gap:10px}
+  .avatar{width:34px;height:34px;border-radius:8px;background:var(--accent-dim);border:1px solid rgba(110,231,183,0.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--accent);flex-shrink:0}
+  .avatar.teacher{background:var(--purple-dim);border-color:rgba(167,139,250,0.3);color:var(--purple)}
+  .sidebar-user-info{min-width:0}
+  .sidebar-user-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sidebar-user-role{font-size:11px;color:var(--text3);font-family:var(--mono)}
+  .sidebar-section{padding:16px 12px 8px}
+  .sidebar-section-label{font-size:10px;font-weight:500;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;padding:0 8px;margin-bottom:4px}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:13.5px;color:var(--text2);transition:all 0.15s;margin-bottom:1px;user-select:none}
+  .nav-item:hover{background:var(--bg3);color:var(--text)}
+  .nav-item.active{background:var(--accent-dim);color:var(--accent)}
+  .nav-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+  .sidebar-courses{padding:0 12px 8px;flex:1;overflow-y:auto}
+  .course-item{display:flex;align-items:center;padding:7px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);transition:all 0.15s;gap:8px}
+  .course-item:hover{background:var(--bg3);color:var(--text)}
+  .course-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .sidebar-footer{padding:12px;border-top:1px solid var(--border)}
+
+  .main{margin-left:240px;min-height:100vh;background:var(--bg)}
+  .topbar{height:56px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 28px;gap:16px;position:sticky;top:0;z-index:50}
+  .topbar-title{font-size:15px;font-weight:500;flex:1}
+  .content{padding:28px;max-width:1000px}
+
+  .section{display:none}
+  .section.active{display:block}
+  .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:16px;flex-wrap:wrap}
+  .page-header h2{font-size:20px;font-weight:600}
+  .page-header p{font-size:13px;color:var(--text2);margin-top:2px}
+
+  .grid-2{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+  .grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+  .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;transition:border-color 0.2s}
+  .card:hover{border-color:var(--text3)}
+  .card-course{cursor:pointer;position:relative;overflow:hidden}
+  .card-course-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
+  .course-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+  .card-course h3{font-size:14px;font-weight:600;margin-bottom:2px}
+  .card-course .meta{font-size:12px;color:var(--text2)}
+  .stats-row{display:flex;gap:16px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+  .stat{font-size:12px;color:var(--text2)}
+  .stat strong{color:var(--text);font-weight:500}
+
+  .task-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;display:flex;align-items:flex-start;gap:14px;margin-bottom:10px;transition:border-color 0.2s;cursor:pointer}
+  .task-item:hover{border-color:var(--text3)}
+  .task-status{width:10px;height:10px;border-radius:50%;margin-top:5px;flex-shrink:0}
+  .task-info{flex:1;min-width:0}
+  .task-title{font-size:14px;font-weight:500;margin-bottom:3px}
+  .task-meta{font-size:12px;color:var(--text2);display:flex;gap:12px;flex-wrap:wrap}
+  .task-actions{display:flex;gap:8px;align-items:center;flex-shrink:0}
+
+  .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:500;font-family:var(--mono)}
+  .badge-amber{background:var(--amber-dim);color:var(--amber)}
+  .badge-gray{background:var(--bg4);color:var(--text3)}
+
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+  .modal-overlay.open{display:flex}
+  .modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;width:100%;max-width:540px;max-height:85vh;overflow-y:auto;position:relative}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+  .modal-header h3{font-size:17px;font-weight:600}
+  .modal-close{width:30px;height:30px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:16px;transition:all 0.15s}
+  .modal-close:hover{color:var(--text);background:var(--bg4)}
+  .modal-actions{display:flex;gap:10px;margin-top:22px;justify-content:flex-end}
+
+  .submission-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;display:flex;align-items:center;gap:14px;margin-bottom:8px}
+  .sub-info{flex:1;min-width:0}
+  .sub-name{font-size:13.5px;font-weight:500}
+  .sub-meta{font-size:12px;color:var(--text2);margin-top:2px}
+  .sub-grade{font-family:var(--mono);font-size:20px;font-weight:500;color:var(--accent)}
+
+  .chat-messages{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg) var(--radius-lg) 0 0;height:360px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+  .chat-msg{max-width:75%;padding:10px 14px;border-radius:12px;font-size:13.5px;line-height:1.5}
+  .chat-msg.mine{background:var(--accent-dim);border:1px solid rgba(110,231,183,0.2);align-self:flex-end}
+  .chat-msg.theirs{background:var(--bg3);border:1px solid var(--border);align-self:flex-start}
+  .chat-msg-sender{font-size:11px;color:var(--text3);margin-bottom:3px;font-family:var(--mono)}
+  .chat-msg-time{font-size:10px;color:var(--text3);margin-top:4px}
+  .chat-input-area{background:var(--bg2);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-lg) var(--radius-lg);padding:12px;display:flex;gap:10px}
+  .chat-input-area input{flex:1}
+
+  .drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:32px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg3)}
+  .drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:var(--accent-dim2)}
+  .drop-zone input[type=file]{display:none}
+  .drop-icon{font-size:28px;margin-bottom:8px}
+  .drop-text{font-size:13px;color:var(--text2)}
+  .drop-text span{color:var(--accent);font-weight:500}
+
+  .material-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px}
+  .file-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+  .file-info{flex:1;min-width:0}
+  .file-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .file-meta{font-size:11px;color:var(--text2);margin-top:2px;font-family:var(--mono)}
+
+  .toast-container{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:9999}
+  .toast{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 18px;font-size:13px;color:var(--text);animation:slideUp 0.25s ease;max-width:320px;display:flex;align-items:center;gap:10px}
+  .toast.success{border-color:rgba(110,231,183,0.4)}
+  .toast.error{border-color:rgba(248,113,113,0.4)}
+  @keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+  .divider{height:1px;background:var(--border);margin:20px 0}
+  .empty-state{text-align:center;padding:48px 20px;color:var(--text3)}
+  .empty-icon{font-size:36px;margin-bottom:12px}
+  .empty-title{font-size:15px;font-weight:500;color:var(--text2);margin-bottom:6px}
+  .empty-sub{font-size:13px}
+  .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;background:var(--bg4);color:var(--text2);font-family:var(--mono)}
+
+  .tabs{display:flex;gap:2px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:4px;margin-bottom:20px;width:fit-content}
+  .tab{padding:7px 16px;border-radius:7px;font-size:13px;cursor:pointer;color:var(--text2);transition:all 0.15s;border:none;background:transparent;font-family:var(--font)}
+  .tab.active{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+  .tab:hover:not(.active){color:var(--text)}
+
+  .progress-bar{height:4px;background:var(--bg4);border-radius:99px;overflow:hidden;margin-top:8px}
+  .progress-fill{height:100%;background:var(--accent);border-radius:99px;transition:width 0.4s}
+  .color-opt{width:32px;height:32px;border-radius:8px;cursor:pointer;border:2px solid transparent;transition:border-color 0.15s}
+  .color-opt.selected{border-color:white}
 </style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel">
-const {useState,useEffect}=React;
 
-const CURSOS=[
-  {id:"comp1",label:"4to Bach — Computación I",color:"#00d2ff",bg:"rgba(0,210,255,0.15)",dark:"#005f7a"},
-  {id:"lab1",label:"4to Bach — Laboratorio I",color:"#7b2ff7",bg:"rgba(123,47,247,0.15)",dark:"#3a006e"},
-  {id:"prog4",label:"4to Perito — Programación C++",color:"#f7971e",bg:"rgba(247,151,30,0.15)",dark:"#7a4500"},
-  {id:"py5",label:"5to Perito — Programación Python",color:"#f7ca18",bg:"rgba(247,202,24,0.15)",dark:"#7a6200"},
-  {id:"comp5",label:"5to Bach — Excel Avanzado",color:"#00a86b",bg:"rgba(0,168,107,0.15)",dark:"#005c3a"},
-  {id:"mad1",label:"Madurez — Computación e Informática",color:"#ff6b9d",bg:"rgba(255,107,157,0.15)",dark:"#7a0035"},
-];
-const getCurso=id=>CURSOS.find(c=>c.id===id);
-const PASS_MAESTRO="liceo2026";
+<div class="toast-container" id="toasts"></div>
 
-// ══ BANCOS DE PREGUNTAS ══
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo"><span class="login-logo-dot"></span>AULA DIGITAL</div>
+    <h1 id="login-title">Iniciar sesión</h1>
+    <p id="login-sub">Plataforma de clases y entregas</p>
+    <div id="register-field" style="display:none">
+      <div class="field-group"><label>Nombre completo</label><input type="text" id="login-name" placeholder="Tu nombre"></div>
+    </div>
+    <div class="field-group"><label>Correo</label><input type="email" id="login-email" placeholder="tu@correo.com"></div>
+    <div class="field-group"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Entrar</button>
+    <div id="login-loading" style="display:none;text-align:center;margin-top:12px;font-size:13px;color:var(--text2)">Iniciando sesión...</div>
+    <div class="login-toggle" id="login-toggle">¿Primera vez? <a onclick="toggleRegister()">Crear cuenta de profesor</a></div>
+  </div>
+</div>
 
-const EXAMENES_LAB1={
-
-  final:{titulo:"Examen Parcial  — Laboratorio I",subtitulo:"Unidad II · Privacidad Digital y Navegación Segura",tiempo:40*60,
-    multiple:[
-      {id:"m1",txt:"¿Qué tipo de cookie desaparece automáticamente al cerrar el navegador?",opts:["Cookie persistente","Cookie de terceros","Cookie de sesión","Cookie cifrada"],correcta:2},
-      {id:"m2",txt:"Buscaste zapatillas deportivas y ahora ves ese anuncio en todos los sitios. ¿Qué técnica lo explica?",opts:["Cookies de sesión","Cookies de terceros y rastreo publicitario","Fingerprinting del dispositivo","DNS seguro activado"],correcta:1},
-      {id:"m3",txt:"¿Cuál describe mejor la huella digital PASIVA?",opts:["Publicar una foto en Instagram","Dar me gusta en una publicación","El navegador guarda tu historial automáticamente sin que lo notes","Escribir un comentario en un foro"],correcta:2},
-      {id:"m4",txt:"URL A: bancoindustrial.com.gt — URL B: banco-industrial.verificacion-segura.com/login — ¿Cuál es falsa?",opts:["La A — usa subdominio engañoso","La B — el dominio real es verificacion-segura.com","Las dos son falsas","Las dos son reales"],correcta:1},
-      {id:"m5",txt:"¿Qué significa que un sitio tenga el candado en la barra de dirección?",opts:["Que el sitio es propiedad del gobierno","Que la conexión está cifrada con SSL/TLS y el sitio tiene certificado válido","Que el sitio no usa cookies de terceros","Que el sitio no puede ser hackeado"],correcta:1},
-      {id:"m6",txt:"¿Cuál es la ruta correcta para revisar opciones de seguridad en Chrome?",opts:["chrome://extensions","chrome://privacy","chrome://settings/security","chrome://certificates"],correcta:2},
-      {id:"m7",txt:"¿Qué técnica usa esta URL falsa? www.gooogle.com",opts:["Subdominio engañoso","Typosquatting — letra repetida","Ruta engañosa","Sustitución por número"],correcta:1},
-      {id:"m8",txt:"¿Qué son los píxeles de seguimiento?",opts:["Imágenes de alta resolución para anuncios","Imágenes invisibles que reportan cuándo abres una página o correo","Archivos que bloquean cookies de terceros","Extensiones de Chrome para privacidad"],correcta:1},
-      {id:"m9",txt:"¿Cuál de estas acciones genera huella digital ACTIVA?",opts:["El navegador guarda tu historial","Una app registra tu ubicación en segundo plano","Publicar una foto en redes sociales","Un sitio guarda tu dirección IP"],correcta:2},
-      {id:"m10",txt:"¿Por qué es importante revisar la configuración de privacidad en redes sociales?",opts:["Para que carguen más rápido","Para limitar quién puede ver tu información personal y reducir tu huella digital","Para evitar cookies de sesión","Para mejorar la velocidad de internet"],correcta:1},
-    ],
-    vf:[
-      {id:"vf1",txt:"El modo incógnito de Chrome elimina completamente tu huella digital.",correcta:false},
-      {id:"vf2",txt:"Un sitio web puede tener el candado HTTPS y aun así ser un sitio falso o de phishing.",correcta:true},
-      {id:"vf3",txt:"Las cookies de terceros son colocadas por el mismo sitio web que visitas.",correcta:false},
-      {id:"vf4",txt:"La huella digital en internet es permanente — información publicada puede quedar accesible aunque la elimines.",correcta:true},
-      {id:"vf5",txt:"Activar 'Usar siempre conexiones seguras' en Chrome fuerza HTTPS en todos los sitios.",correcta:true},
-      {id:"vf6",txt:"El fingerprinting identifica tu dispositivo por sus características únicas.",correcta:true},
-      {id:"vf7",txt:"Las cookies persistentes se eliminan cuando cierras el navegador.",correcta:false},
-      {id:"vf8",txt:"La URL malicioso.com/banguat.gob.gt/login pertenece al dominio banguat.gob.gt.",correcta:false},
-    ],
-    completar:{banco:["cookies","huella digital","HTTPS","certificado SSL","rastreo","dominio","privacidad","phishing"],preguntas:[
-      {id:"c1",pre:"Los pequeños archivos que los sitios guardan en tu navegador se llaman",post:".",correcta:"cookies"},
-      {id:"c2",pre:"El conjunto de toda la información que generás al usar internet se llama",post:".",correcta:"huella digital"},
-      {id:"c3",pre:"El protocolo que cifra la comunicación entre el navegador y el servidor web se llama",post:".",correcta:"HTTPS"},
-      {id:"c4",pre:"El documento digital que confirma la identidad de un sitio web se llama",post:".",correcta:"certificado SSL"},
-      {id:"c5",pre:"La recopilación sistemática de tus hábitos de navegación para mostrar anuncios se llama",post:"web.",correcta:"rastreo"},
-    ]},
-    desarrollo:[
-      {id:"d1",pts:3,txt:"Explica qué es el rastreo web y menciona DOS técnicas que usan las empresas para rastrearte en internet."},
-      {id:"d2",pts:2,txt:"Describe qué harías para reducir tu huella digital. Menciona al menos TRES acciones concretas."},
-    ],
-  }
-};
-
-const EXAMENES_COMP1={
-    parcial:{
-    tipo:"practico",
-    titulo:"Parcial Práctico — Excel Avanzado · Unidad II",
-    subtitulo:"PROMEDIO · SI · SI Anidado",
-    programa:"Microsoft Excel",
-    entregable:"Parcial U.II — Excel Avanzado",
-    tiempo:40*60,
-    tabla:{
-      titulo:"📋 Archivos que debes crear y entregar",
-      headers:["#","Archivo","Descripción","Puntos"],
-      rows:[
-        ["1","parcial_u2_ej1.xlsx","Control de notas — PROMEDIO, SI y SI Anidado con escala de calificaciones","50 pts"],
-        ["2","parcial_u2_ej2.xlsx","Planilla de empleados — PROMEDIO, SI para bonificación y SI Anidado para categoría","50 pts"],
-      ]
-    },
-    incisos:[
-      {id:"i1",pts:50,letra:"a",txt:"Crea parcial_u2_ej1.xlsx — Ingresa una tabla con los campos: Alumno, Nota 1, Nota 2, Nota 3, Promedio, Estado, Calificación. Ingresa 8 alumnos con notas inventadas entre 40 y 100. En Promedio usa =PROMEDIO() para calcular el promedio de las 3 notas. En Estado usa =SI() para mostrar 'APROBADO' si el promedio es ≥ 60, o 'REPROBADO' si no. En Calificación usa SI Anidado con esta escala: 90-100 → 'Excelente', 80-89 → 'Muy Bien', 70-79 → 'Bien', 60-69 → 'Aprobado', 0-59 → 'Reprobado'. Aplica formato: encabezados en verde con texto blanco, bordes a toda la tabla, negrita en encabezados."},
-      {id:"i2",pts:50,letra:"b",txt:"Crea parcial_u2_ej2.xlsx — Ingresa una tabla con los campos: Empleado, Sueldo Base, Horas Extra, Pago Extra (horas × Q15), Sueldo Total (base + pago extra), Bonificación, Categoría. Ingresa 8 empleados con datos inventados (sueldos entre Q1,500 y Q5,000, horas extra entre 0 y 20). Pago Extra = horas extra × Q15. Sueldo Total = sueldo base + pago extra. En Bonificación usa =SI(): si el sueldo total es mayor a Q3,000 → 'Q500', si no → 'Q0'. En Categoría usa SI Anidado: Sueldo Total > Q4,000 → 'A', Sueldo Total > Q2,500 → 'B', de lo contrario → 'C'. Aplica formato moneda (Q) a columnas de dinero, bordes y encabezados con color."},
-    ],
-  },
-};
-
-const EXAMENES_PY5={
-  parcial_u2:{
-    tipo:"practico",
-    titulo:"Parcial Práctico — Programación Python · Unidad II",
-    subtitulo:"Condicional if / else / elif",
-    programa:"IDLE, Thonny o VS Code",
-    entregable:"Parcial U.II — Condicionales Python",
-    tiempo:40*60,
-    tabla:{
-      titulo:"📋 Archivos que debes crear y entregar",
-      headers:["#","Archivo","Descripción","Puntos"],
-      rows:[
-        ["1","ejercicio1.py","¿Aprobado o reprobado? — if/else con nota >= 60","25 pts"],
-        ["2","ejercicio2.py","Mayor o menor de edad — if/else, calcular años faltantes","25 pts"],
-        ["3","ejercicio3.py","Clasificador de notas — if/elif/else con 5 rangos","25 pts"],
-        ["4","ejercicio4.py","Calculadora de descuentos — if/elif/else con rangos en quetzales","25 pts"],
-      ]
-    },
-    incisos:[
-      {id:"i1",pts:25,letra:"a",txt:"Crea ejercicio1.py: pide la nota final (0-100) con input() y convierte con float(). Usa if/else: si nota >= 60 imprime 'Felicidades, aprobaste con X puntos.' Si no, imprime 'Lo sentimos, reprobaste con X puntos.' Prueba con: 75, 45 y 60."},
-      {id:"i2",pts:25,letra:"b",txt:"Crea ejercicio2.py: pide la edad con input() y convierte con int(). Usa if/else: si edad >= 18 imprime 'Eres mayor de edad.' Si es menor, calcula 18 - edad e imprime 'Eres menor de edad. Te faltan X años.' Prueba con: 20, 15 y 18."},
-      {id:"i3",pts:25,letra:"c",txt:"Crea ejercicio3.py: pide una nota con input() y conviértela con float(). Usa if/elif/else con 5 rangos: 90-100 → Excelente, 80-89 → Muy bien, 70-79 → Bien, 60-69 → Aprobado, 0-59 → Reprobado. Imprime: 'Nota: X — Clasificación'. Prueba con: 95, 82, 65 y 40."},
-      {id:"i4",pts:25,letra:"d",txt:"Crea ejercicio4.py: pide el total de una compra en quetzales con input() y convierte con float(). Usa if/elif/else: Q200 o más → 20% descuento, Q100 a Q199.99 → 10% descuento, menos de Q100 → sin descuento. Calcula e imprime el monto de descuento y el total a pagar. Prueba con: Q250, Q150 y Q80."},
-    ],
-  },
-};
-
-const EXAMENES_PROG4={
-  parcial:{
-    tipo:"practico",
-    titulo:"Parcial Práctico — Programación C++ · Unidad II",
-    subtitulo:"Condicionales: if / if-else / else if / switch",
-    programa:"Dev-C++ o Code::Blocks",
-    entregable:"Parcial U.II — Condicionales C++",
-    tiempo:50*60,
-    tabla:{
-      titulo:"📋 Programas que debes escribir en C++",
-      headers:["#","Archivo","Descripción","Puntos"],
-      rows:[
-        ["1","ejercicio1.cpp","¿Aprobado o reprobado? — if/else con nota >= 60","25 pts"],
-        ["2","ejercicio2.cpp","Mayor o menor de edad — if/else, calcular años faltantes","25 pts"],
-        ["3","ejercicio3.cpp","Clasificador de notas — if/else if/else con 5 rangos","25 pts"],
-        ["4","ejercicio4.cpp","Menú de operaciones — switch con suma, resta, mult y división","25 pts"],
-      ]
-    },
-    incisos:[
-      {id:"i1",pts:25,letra:"a",txt:"Crea ejercicio1.cpp: pide la nota final (0-100) e imprime 'Felicidades, aprobaste con X puntos.' si es >= 60, o 'Lo sentimos, reprobaste con X puntos.' si no. Usa if / else."},
-      {id:"i2",pts:25,letra:"b",txt:"Crea ejercicio2.cpp: pide la edad. Si es >= 18 imprime 'Eres mayor de edad.' Si es menor, calcula 18 - edad e imprime 'Eres menor de edad. Te faltan X anios.' Usa if / else."},
-      {id:"i3",pts:25,letra:"c",txt:"Crea ejercicio3.cpp: pide una nota y clasifícala — 90-100: Excelente, 80-89: Muy bien, 70-79: Bien, 60-69: Aprobado, 0-59: Reprobado. Imprime 'Nota: X — Clasificacion'. Usa if / else if / else."},
-      {id:"i4",pts:25,letra:"d",txt:"Crea ejercicio4.cpp: muestra un menú (1-Suma, 2-Resta, 3-Multiplicación, 4-División), pide dos números float y realiza la operación. Para la división, verifica que el divisor != 0. Usa switch con break en cada case."},
-    ],
-  },
-
-
-
-  // ── FINAL: Condicionales ──
-  final:{titulo:"Parcial U II — Programación C++",subtitulo:"Condicionales if / else / else if",tiempo:40*60,
-    multiple:[
-      {id:"m1",txt:"¿Cuál es la sintaxis correcta de un if en C++?",opts:["if x > 0:","if (x > 0) {","if x > 0 then {","if: (x > 0)"],correcta:1},
-      {id:"m2",txt:"¿Qué operador compara si dos valores son IGUALES en C++?",opts:["=","!=","==",">="],correcta:2},
-      {id:"m3",txt:"nota = 75 — ¿Qué imprime: if(nota>=60) cout<<\"Aprobado\"; else cout<<\"Reprobado\";?",opts:["Reprobado","Aprobado","75","Error"],correcta:1},
-      {id:"m4",txt:"¿Cuándo se usa else if en C++?",opts:["Para terminar el if","Para añadir condición alternativa","Para repetir el if","Para comparar texto"],correcta:1},
-      {id:"m5",txt:"¿Qué significa el operador != en C++?",opts:["Mayor que","Igual que","Diferente de","Menor o igual que"],correcta:2},
-    ],
-    vf:[
-      {id:"vf1",txt:"En C++, el cuerpo del if debe ir entre llaves { } si tiene más de una instrucción.",correcta:true},
-      {id:"vf2",txt:"else if se puede usar sin un if previo en C++.",correcta:false},
-      {id:"vf3",txt:"Se puede tener más de un else if en la misma estructura condicional.",correcta:true},
-      {id:"vf4",txt:"El else es obligatorio en toda estructura if de C++.",correcta:false},
-    ],
-    completar:{banco:["if","else","else if","==","!=","cout","cin","int"],preguntas:[
-      {id:"c1",pre:"Para agregar una condición alternativa en C++ usamos",post:".",correcta:"else if"},
-      {id:"c2",pre:"El operador para comparar si dos valores son iguales en C++ es",post:".",correcta:"=="},
-      {id:"c3",pre:"El bloque",post:"se ejecuta cuando ninguna condición anterior fue verdadera.",correcta:"else"},
-    ]},
-    desarrollo:[{id:"d1",pts:5,txt:"Escribe un programa C++ que pida una nota (0-100) y muestre: 90-100 Excelente, 80-89 Muy bien, 70-79 Bien, 60-69 Aprobado, 0-59 Reprobado."}],
-  }
-};
-
-const EXAMENES_COMP5={
-  parcial:{
-    tipo:"practico",
-    titulo:"Mini Parcial Práctico — Excel Avanzado · Unidad II",
-    subtitulo:"CONTAR.SI.CONJUNTO · SUMAR.SI · SUMAR.SI.CONJUNTO · BUSCARV",
-    programa:"Microsoft Excel",
-    entregable:"Mini Parcial U.II — Excel Avanzado",
-    tiempo:40*60,
-    tabla:{
-      titulo:"📋 Archivos que debes crear y entregar",
-      headers:["#","Archivo","Descripción","Puntos"],
-      rows:[
-        ["1","parcial_ej1.xlsx","Inventario de tienda — CONTAR.SI.CONJUNTO con 2 y 3 condiciones","25 pts"],
-        ["2","parcial_ej2.xlsx","Planilla de empleados — SUMAR.SI y SUMAR.SI.CONJUNTO","25 pts"],
-        ["3","parcial_ej3.xlsx","Catálogo de cursos — BUSCARV + SI.ERROR","25 pts"],
-        ["4","parcial_ej4.xlsx","Registro de ventas — Integrador con las 3 funciones","25 pts"],
-      ]
-    },
-    incisos:[
-      {id:"i1",pts:25,letra:"a",txt:"Crea parcial_ej1.xlsx — Ingresa la tabla de inventario (Producto, Categoría, Proveedor, Stock, Estado) con 8 filas de datos. Luego en columna G crea 5 consultas con CONTAR.SI.CONJUNTO: a) Útiles disponibles b) Tecnología con bajo stock c) Proveedora B disponibles d) Stock > 10 y Disponible e) Útiles + Proveedora A + Disponible (3 condiciones)."},
-      {id:"i2",pts:25,letra:"b",txt:"Crea parcial_ej2.xlsx — Ingresa la tabla de empleados (Nombre, Depto, Puesto, Sueldo, Estado) con 8 filas. En columna G crea el resumen: total de sueldos por cada depto (Ventas, Admin, Bodega) con SUMAR.SI; total de Ventas solo Activos con SUMAR.SI.CONJUNTO; total de Activos con sueldo > Q4,000 con SUMAR.SI.CONJUNTO. Aplica formato Moneda (Q) a todos los resultados."},
-      {id:"i3",pts:25,letra:"c",txt:"Crea parcial_ej3.xlsx — Ingresa la tabla catálogo (Código, Curso, Costo, Duración) con 6 filas. En columna F crea consultas con BUSCARV: nombre del curso C03, costo de C06, duración de C01, costo de C04. Para el código C99 (inexistente) usa SI.ERROR con BUSCARV para mostrar 'Curso no registrado'. En F8 calcula el costo de 3 cursos C02 usando BUSCARV (no escribas el precio a mano). Aplica formato Moneda (Q) a los costos."},
-      {id:"i4",pts:25,letra:"d",txt:"Crea parcial_ej4.xlsx — Ingresa la tabla de ventas (Vendedor, Región, Producto, Cantidad, Total, Mes) con 8 filas. En una zona aparte crea el resumen completo: con CONTAR.SI.CONJUNTO cuenta ventas de Sofía en Norte, ventas de Laptop en Enero, y ventas de Marcos con cantidad > 10; con SUMAR.SI suma el total de Sofía y el total de Diego; con SUMAR.SI.CONJUNTO suma Laptop en Sur y Febrero en Norte; crea tabla auxiliar (Vendedor/Meta) y usa BUSCARV para traer la meta de Marcos y Diego. Aplica formato Moneda (Q) a todos los totales."},
-    ],
-  },
-};
-
-const EXAMENES_MAD1={
-  parcial:{titulo:"Parcial  — Computación e Informática",subtitulo:"TIC, Hardware, Software y Excel básico",tiempo:40*60,
-    multiple:[
-      {id:"m1",txt:"¿Qué significan las siglas TIC?",opts:["Tecnologías de Información y Computación","Tecnologías de la Información y Comunicación","Técnicas de Internet y Computadoras","Tecnología Internacional de Comunicación"],correcta:1},
-      {id:"m2",txt:"¿Cuál de estos es un ejemplo de HARDWARE?",opts:["Microsoft Word","Windows 11","El teclado y el mouse","Google Chrome"],correcta:2},
-      {id:"m3",txt:"¿Cuál de estos es un ejemplo de SOFTWARE?",opts:["La impresora","El disco duro","La memoria RAM","El sistema operativo Windows"],correcta:3},
-      {id:"m4",txt:"El monitor y la impresora son dispositivos de:",opts:["Entrada","Almacenamiento","Salida","Procesamiento"],correcta:2},
-      {id:"m5",txt:"¿Cuánto espacio de almacenamiento gratuito ofrece Google Drive?",opts:["5 GB","10 GB","15 GB","20 GB"],correcta:2},
-      {id:"m6",txt:"En Excel, ¿cómo se llama la intersección entre una fila y una columna?",opts:["Tabla","Fila","Rango","Celda"],correcta:3},
-      {id:"m7",txt:"¿Con qué símbolo deben comenzar TODAS las fórmulas en Excel?",opts:["+","#","=","@"],correcta:2},
-      {id:"m8",txt:"OneDrive es el servicio de almacenamiento en la nube de:",opts:["Google","Apple","Amazon","Microsoft"],correcta:3},
-    ],
-    vf:[
-      {id:"vf1",txt:"Las TIC incluyen hardware, software, redes e internet.",correcta:true},
-      {id:"vf2",txt:"El teclado es un dispositivo de salida porque envía datos al computador.",correcta:false},
-      {id:"vf3",txt:"Google Drive ofrece 15 GB de almacenamiento gratuito.",correcta:true},
-      {id:"vf4",txt:"En Excel, las columnas se identifican con números (1, 2, 3...).",correcta:false},
-      {id:"vf5",txt:"Toda fórmula en Excel debe comenzar con el signo igual (=).",correcta:true},
-      {id:"vf6",txt:"El almacenamiento en la nube requiere conexión a internet.",correcta:true},
-    ],
-    completar:{banco:["TIC","hardware","software","celda","nube","SUMA","salida","sistema operativo"],preguntas:[
-      {id:"c1",pre:"Las",post:"son herramientas, redes y servicios que permiten crear, procesar y compartir información digital.",correcta:"TIC"},
-      {id:"c2",pre:"El monitor muestra resultados al usuario, por eso es un dispositivo de",post:".",correcta:"salida"},
-      {id:"c3",pre:"Windows y Linux son ejemplos de",post:".",correcta:"sistema operativo"},
-      {id:"c4",pre:"La intersección entre una fila y una columna en Excel se llama",post:".",correcta:"celda"},
-    ]},desarrollo:[],
-  },
-
-
-
-  // ── Parcial Unidad II — PRÁCTICO en computadora ──
-  parcial_u2:{
-    tipo:"practico",
-    titulo:"Parcial Práctico — Computación e Informática · Unidad II",
-    subtitulo:"Función SI y SUMA en Excel · Planilla de empleados",
-    tiempo:50*60,
-    entregable:"Parcial U.II — Planilla Empleados",
-    incisos:[
-      {id:"i1",pts:20,letra:"a",txt:"Ingresa los datos de la tabla en Excel exactamente como aparecen: empleados en columna A, días trabajados en B y pago por día en C."},
-      {id:"i2",pts:20,letra:"b",txt:'En la columna D (Sueldo total) escribe una fórmula que multiplique los días trabajados por el pago por día. Para D2 sería: =B2*C2. Aplícala a los 5 empleados.'},
-      {id:"i3",pts:20,letra:"c",txt:'En la columna E (¿Bono?) usa la función SI: si el sueldo total (D) es mayor o igual a Q1,500.00 → mostrar "Sí 🎉", si no → "No". Aplícala a los 5 empleados.'},
-      {id:"i4",pts:15,letra:"d",txt:'En la celda D8 escribe =SUMA(D2:D6) para sumar todos los sueldos. Escribe la etiqueta "TOTAL GENERAL" en la celda A8.'},
-      {id:"i5",pts:15,letra:"e",txt:'Aplica formato a los encabezados (fila 1): fondo verde oscuro, letra blanca en negrita. Aplica formato Moneda (Q) a las columnas C y D.'},
-      {id:"i6",pts:10,letra:"f",txt:'Guarda el archivo como: Planilla_TuNombre.xlsx y súbelo en el Portal de Tareas en la actividad "Parcial U.II — Planilla Empleados".'},
-    ],
-  },
-
-
-};
-
-
-
-
-// ── El mapa ahora incluye parcial_u2 para prog4 ──
-const EXAM_MAP={lab1:EXAMENES_LAB1,comp1:EXAMENES_COMP1,py5:EXAMENES_PY5,prog4:EXAMENES_PROG4,comp5:EXAMENES_COMP5,mad1:EXAMENES_MAD1};
-
-function calcAuto(r,examen){
-  if(!examen)return 0;let p=0;
-  examen.multiple.forEach(q=>{if(r.multiple?.[q.id]===q.correcta)p++;});
-  examen.vf.forEach(q=>{if(r.vf?.[q.id]===q.correcta)p++;});
-  examen.completar.preguntas.forEach(q=>{if((r.completar?.[q.id]||"").toLowerCase().trim()===q.correcta.toLowerCase())p++;});
-  return p;
-}
-function maxAuto(examen){if(!examen)return 0;return examen.multiple.length+examen.vf.length+examen.completar.preguntas.length;}
-
-const JB_URL=()=>`https://api.jsonbin.io/v3/b/${window.JSONBIN_BIN}`;
-const JB_H=()=>({"Content-Type":"application/json","X-Master-Key":window.JSONBIN_KEY,"X-Bin-Versioning":"false"});
-async function jbGet(){const g=await fetch(JB_URL(),{headers:JB_H()});const d=await g.json();return d.record||{respuestas:[],estado:{}};}
-async function jbSet(data){await fetch(JB_URL(),{method:"PUT",headers:JB_H(),body:JSON.stringify(data)});}
-async function guardarRespuesta(resp){try{const d=await jbGet();const arr=Array.isArray(d.respuestas)?d.respuestas:[];arr.push(resp);await jbSet({...d,respuestas:arr});return true;}catch(e){console.error(e);return false;}}
-async function leerEstado(){try{const d=await jbGet();return d.estado||{};}catch(e){return{};}}
-async function guardarEstado(estado){try{const d=await jbGet();await jbSet({...d,estado});}catch(e){console.error(e);}}
-async function leerRespuestas(){try{const d=await jbGet();return Array.isArray(d.respuestas)?d.respuestas:[];}catch(e){return[];}}
-
-const btn=(e={})=>({background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:10,padding:"9px 20px",color:"#fff",cursor:"pointer",fontSize:13,...e});
-const card={background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:16,marginBottom:12};
-
-function useTimer(s){
-  const [t,setT]=useState(s);
-  useEffect(()=>{const x=setInterval(()=>setT(p=>p>0?p-1:0),1000);return()=>clearInterval(x);},[]);
-  const mm=String(Math.floor(t/60)).padStart(2,"0"),ss=String(t%60).padStart(2,"0");
-  return{mm,ss,color:t<300?"#ff5050":t<600?"#ffaa00":"#00ff88",agotado:t<=0};
-}
-function TopBar({cursoId,nombre,mm,ss,timerColor}){
-  const c=getCurso(cursoId)||{label:"Examen",color:"#00d4ff"};
-  return(<div style={{background:"rgba(0,0,0,0.5)",borderBottom:"1px solid rgba(255,255,255,0.1)",padding:"10px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:10}}><div><div style={{fontSize:13,fontWeight:700}}>{c.label}</div><div style={{fontSize:11,color:c.color}}>{nombre}</div></div><div style={{background:"rgba(0,0,0,0.3)",border:`1px solid ${timerColor}`,borderRadius:8,padding:"5px 14px",fontFamily:"monospace",fontSize:16,fontWeight:700,color:timerColor}}>⏱ {mm}:{ss}</div></div>);
-}
-function ProgBar({sec,total}){return(<div style={{height:3,background:"rgba(255,255,255,0.1)"}}><div style={{height:"100%",width:`${(sec/total)*100}%`,background:"linear-gradient(90deg,#00d4ff,#7b2ff7)",transition:"width .4s"}}/></div>);}
-function TabsBar({tabs,sec,setSec,color}){return(<div style={{display:"flex",gap:4,padding:"10px 20px 0",borderBottom:"1px solid rgba(255,255,255,0.08)",overflowX:"auto"}}>{tabs.map((t,i)=><button key={i} onClick={()=>setSec(i)} style={{background:sec===i?"rgba(0,0,0,0.3)":"transparent",border:sec===i?`1px solid ${color}`:"1px solid transparent",color:sec===i?color:"rgba(255,255,255,0.5)",borderRadius:"8px 8px 0 0",padding:"7px 12px",cursor:"pointer",fontSize:12,fontWeight:sec===i?700:400,whiteSpace:"nowrap"}}>{i+1}. {t}</button>)}</div>);}
-function SecHeader({title,pts,inst,color="#003366"}){return(<div style={{marginBottom:16}}><div style={{background:color,borderRadius:8,padding:"8px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{fontWeight:700,fontSize:13,textTransform:"uppercase"}}>{title}</span><span style={{fontSize:11,background:"rgba(255,255,255,0.2)",padding:"2px 10px",borderRadius:10}}>{pts}</span></div><div style={{fontSize:12,color:"rgba(255,255,255,0.5)",fontStyle:"italic"}}>{inst}</div></div>);}
-function PregMultiple({q,qi,sel,onSel,color}){return(<div style={card}><div style={{fontSize:14,marginBottom:10,lineHeight:1.5,whiteSpace:"pre-line"}}><span style={{fontWeight:700,color}}>{qi+1}.</span> {q.txt}</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>{q.opts.map((o,oi)=><button key={oi} onClick={()=>onSel(oi)} style={{background:sel===oi?"rgba(0,212,255,0.15)":"rgba(255,255,255,0.05)",border:sel===oi?"1px solid #00d4ff":"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:"8px 12px",color:sel===oi?"#00d4ff":"rgba(255,255,255,0.8)",cursor:"pointer",fontSize:12,textAlign:"left",display:"flex",gap:6}}><span style={{fontWeight:700,flexShrink:0}}>{["A","B","C","D"][oi]})</span>{o}</button>)}</div></div>);}
-function PregVF({q,qi,sel,onSel}){return(<div style={{...card,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}><div style={{fontSize:13,lineHeight:1.5,flex:1}}><span style={{fontWeight:700,color:"#a78bff"}}>{qi+1}.</span> {q.txt}</div><div style={{display:"flex",gap:8,flexShrink:0}}>{[true,false].map(v=><button key={String(v)} onClick={()=>onSel(v)} style={{background:sel===v?(v?"rgba(0,255,136,0.2)":"rgba(255,80,80,0.2)"):"rgba(255,255,255,0.07)",border:sel===v?(v?"1px solid #00ff88":"1px solid #ff5050"):"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:"7px 14px",color:sel===v?(v?"#00ff88":"#ff5050"):"rgba(255,255,255,0.6)",cursor:"pointer",fontWeight:700,fontSize:13}}>{v?"V":"F"}</button>)}</div></div>);}
-function BancoPalabras({banco}){return(<div style={{background:"rgba(255,255,255,0.04)",borderRadius:10,padding:12,marginBottom:14,border:"1px dashed rgba(255,255,255,0.2)"}}><div style={{fontSize:11,color:"rgba(255,255,255,0.5)",marginBottom:8,fontWeight:700}}>BANCO DE PALABRAS:</div><div style={{display:"flex",flexWrap:"wrap",gap:8}}>{banco.map(w=><span key={w} style={{background:"rgba(0,212,255,0.1)",border:"1px solid rgba(0,212,255,0.2)",borderRadius:6,padding:"3px 10px",fontSize:12,color:"#00d4ff"}}>{w}</span>)}</div></div>);}
-function PregCompletar({q,qi,val,onChange}){return(<div style={card}><div style={{fontSize:13,lineHeight:2,display:"flex",flexWrap:"wrap",alignItems:"center",gap:4}}><span style={{fontWeight:700,color:"#a78bff"}}>{qi+1}.</span><span>{q.pre}</span><input value={val} onChange={e=>onChange(e.target.value)} placeholder="escribe aquí..." style={{background:"rgba(255,255,255,0.08)",border:"none",borderBottom:"2px solid rgba(0,212,255,0.5)",padding:"2px 8px",color:"#00d4ff",fontSize:13,outline:"none",minWidth:160,borderRadius:"4px 4px 0 0"}}/><span>{q.post}</span></div></div>);}
-function NavBotones({sec,setSec,max}){return(<div style={{display:"flex",justifyContent:"space-between",marginTop:16}}>{sec>0&&<button onClick={()=>setSec(s=>s-1)} style={btn()}>← Anterior</button>}{sec<max&&<button onClick={()=>setSec(s=>s+1)} style={{...btn({marginLeft:"auto"}),background:"rgba(0,212,255,0.15)",border:"1px solid rgba(0,212,255,0.3)",color:"#00d4ff",fontWeight:600}}>Siguiente →</button>}</div>);}
-function BotonEnviar({confirm,setConfirm,enviando,enviar}){
-  if(!confirm)return(<button onClick={()=>setConfirm(true)} style={{width:"100%",marginTop:8,background:"linear-gradient(90deg,#00d4ff,#7b2ff7)",border:"none",borderRadius:12,padding:14,color:"#fff",fontWeight:700,fontSize:15,cursor:"pointer"}}>Enviar examen 📨</button>);
-  return(<div style={{background:"rgba(255,170,0,0.1)",border:"1px solid rgba(255,170,0,0.4)",borderRadius:12,padding:16,textAlign:"center",marginTop:8}}><div style={{fontSize:14,color:"#ffaa00",marginBottom:12}}>¿Confirmas el envío? No podrás modificar tus respuestas.</div><div style={{display:"flex",gap:10,justifyContent:"center"}}><button onClick={()=>setConfirm(false)} style={btn()}>Revisar primero</button><button onClick={enviar} disabled={enviando} style={{background:"#00ff88",border:"none",borderRadius:8,padding:"9px 20px",color:"#000",fontWeight:700,cursor:"pointer",fontSize:13}}>{enviando?"Enviando...":"Sí, enviar ✓"}</button></div></div>);
-}
-function Enviado({nombre}){return(<div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0a0a1a,#0a1628)",display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center",padding:40}}><div style={{fontSize:60,marginBottom:16}}>✅</div><h2 style={{fontSize:24,fontWeight:800,color:"#00ff88",marginBottom:8}}>¡Examen enviado!</h2><p style={{color:"rgba(255,255,255,0.6)",marginBottom:6}}>Tus respuestas fueron guardadas, {nombre.split(" ")[0]}.</p><p style={{fontSize:13,color:"rgba(255,255,255,0.4)"}}>Tu catedrático revisará y publicará tu nota pronto.</p></div></div>);}
-
-
-function EnviadoPractico({nombre,cursoId}){
-  const c=getCurso(cursoId)||{color:"#ff6b9d"};
-  return(<div style={{minHeight:"100vh",background:`linear-gradient(135deg,#0a0a1a,${c.dark||"#3a006e"})`,display:"flex",alignItems:"center",justifyContent:"center"}}>
-    <div style={{textAlign:"center",padding:40,maxWidth:500}}>
-      <div style={{fontSize:60,marginBottom:16}}>💻</div>
-      <h2 style={{fontSize:24,fontWeight:800,color:c.color,marginBottom:8}}>¡Instrucciones leídas!</h2>
-      <p style={{color:"rgba(255,255,255,0.7)",marginBottom:12,lineHeight:1.6}}>{nombre.split(" ")[0]}, ahora abre <strong>el programa indicado</strong> y completa el ejercicio siguiendo los incisos.</p>
-      <div style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:12,padding:16,fontSize:13,color:"rgba(255,255,255,0.7)",lineHeight:1.7,textAlign:"left"}}>
-        <div style={{fontWeight:700,color:c.color,marginBottom:8}}>📋 Recuerda antes de cerrar:</div>
-        <div>1. Guarda tu archivo con el nombre indicado en los incisos.</div>
-        <div style={{marginTop:6}}>2. Entra al <strong>Portal de Tareas</strong> → sección <strong>Tareas</strong></div>
-        <div style={{marginTop:6}}>3. Busca la actividad del parcial y sube tu archivo.</div>
+<!-- APP -->
+<div id="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo"><span style="width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block"></span>AULA DIGITAL</div>
+      <div class="sidebar-user">
+        <div class="avatar" id="sb-avatar">A</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sb-name">Usuario</div>
+          <div class="sidebar-user-role" id="sb-role">alumno</div>
+        </div>
       </div>
     </div>
-  </div>);
-}
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">General</div>
+      <div class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard"><span class="nav-icon">⊡</span> Panel</div>
+      <div class="nav-item" onclick="showSection('courses')" id="nav-courses"><span class="nav-icon">◫</span> Clases</div>
+      <div class="nav-item" onclick="showSection('tasks')" id="nav-tasks"><span class="nav-icon">◈</span> Tareas</div>
+      <div class="nav-item" onclick="showSection('chat')" id="nav-chat"><span class="nav-icon">◎</span> Chat</div>
+      <div class="nav-item" onclick="showSection('exams')" id="nav-exams"><span class="nav-icon">📋</span> Exámenes</div>
+    </div>
+    <div class="sidebar-section" id="teacher-nav" style="display:none">
+      <div class="sidebar-section-label">Profesor</div>
+      <div class="nav-item" onclick="showSection('submissions')" id="nav-submissions"><span class="nav-icon">◑</span> Entregas</div>
+      <div class="nav-item" onclick="showSection('students')" id="nav-students"><span class="nav-icon">◉</span> Alumnos</div>
+    </div>
+    <div class="sidebar-courses" id="sidebar-courses">
+      <div class="sidebar-section-label" style="padding:0 0 4px">Mis Clases</div>
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost" style="width:100%;font-size:13px" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+  </div>
 
-function ExamenPractico({nombre,cursoId,tipoExamen,onEnviar}){
-  const c=getCurso(cursoId);
-  const examen=EXAM_MAP[cursoId]?.[tipoExamen];
-  const [respuestas,setRespuestas]=useState({});
-  const [enviado,setEnviado]=useState(false);
-  const [confirm,setConfirm]=useState(false);
-  const [enviando,setEnviando]=useState(false);
-  const {mm,ss,color:tc,agotado}=useTimer(examen?.tiempo||50*60);
-  useEffect(()=>{if(agotado&&!enviado)enviar();},[agotado]);
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Panel</div>
+    </div>
+    <div class="content">
 
-  const enviar=async()=>{
-    if(enviando||enviado)return;
-    setEnviando(true);
-    await onEnviar({nombre,cursoId,curso:c.label,tipoExamen,titulo:examen?.titulo,
-      fecha:new Date().toLocaleString("es-GT"),tipo:"practico",respuestas});
-    setEnviado(true);
-  };
-
-  if(!examen)return<div style={{color:"#ff8080",padding:40,textAlign:"center"}}>Examen no configurado.</div>;
-  if(enviado)return<EnviadoPractico nombre={nombre} cursoId={cursoId}/>;
-
-  return(
-    <div style={{minHeight:"100vh",background:`linear-gradient(135deg,#0a0a1a,${c.dark})`}}>
-      <TopBar cursoId={cursoId} nombre={nombre} mm={mm} ss={ss} timerColor={tc}/>
-      <div style={{background:c.bg,borderBottom:`1px solid ${c.color}44`,padding:"8px 20px"}}>
-        <div style={{fontWeight:700,color:c.color,fontSize:13}}>{examen.titulo}</div>
-        <div style={{fontSize:11,color:"rgba(255,255,255,0.5)"}}>{examen.subtitulo}</div>
-      </div>
-      <div style={{maxWidth:820,margin:"0 auto",padding:"24px 20px 80px"}}>
-
-        {/* Aviso */}
-        <div style={{background:"rgba(0,212,255,0.08)",border:"1px solid rgba(0,212,255,0.2)",borderRadius:12,padding:"14px 18px",marginBottom:20,fontSize:13,lineHeight:1.7}}>
-          <div style={{fontWeight:700,color:"#00d4ff",marginBottom:6}}>💻 ¿Cómo realizar este parcial?</div>
-          <div style={{color:"rgba(255,255,255,0.75)"}}>
-            1. Lee los incisos en esta pantalla.<br/>
-            2. Abre <strong>{examen.programa||"el programa indicado"}</strong> y completa el ejercicio siguiendo cada inciso.<br/>
-            3. Al terminar haz clic en <strong>"Confirmar — ya terminé"</strong>.<br/>
-            4. Sube tu archivo en la actividad <strong>"{examen.entregable}"</strong> del Portal de Tareas.
-          </div>
-        </div>
-
-        {/* Tabla de datos si existe */}
-        {examen.tabla&&<div style={{...card,marginBottom:20}}>
-          <div style={{fontWeight:700,color:c.color,fontSize:13,marginBottom:12}}>{examen.tabla.titulo}</div>
-          <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,fontFamily:"monospace"}}>
-              <thead><tr>{examen.tabla.headers.map((h,i)=><th key={i} style={{background:"#1a3a1a",color:"#00d4ff",padding:"7px 10px",border:"1px solid rgba(255,255,255,0.1)",textAlign:"center",fontWeight:700,fontSize:11}}>{h}</th>)}</tr></thead>
-              <tbody>{examen.tabla.rows.map((row,ri)=><tr key={ri} style={{background:ri%2===0?"rgba(255,255,255,0.03)":"rgba(255,255,255,0.01)"}}>{row.map((cell,ci)=><td key={ci} style={{padding:"6px 10px",border:"1px solid rgba(255,255,255,0.08)",color:ci===0?"rgba(255,255,255,0.5)":typeof cell==="number"?"#fbbf24":cell.toString().startsWith("=")||cell.toString().startsWith("tú")?"#00ff88":"#fff",textAlign:ci===0?"center":"left",fontStyle:cell.toString().startsWith("tú")?"italic":"normal",fontSize:cell.toString().startsWith("=")?"11px":"12px"}}>{cell}</td>)}</tr>)}
-              </tbody>
-            </table>
-          </div>
-        </div>}
-
-        {/* Incisos */}
-        <div style={{...card,marginBottom:20}}>
-          <div style={{fontWeight:700,color:c.color,fontSize:13,marginBottom:14}}>📝 Incisos a realizar</div>
-          {examen.incisos.map((inc,i)=>(
-            <div key={inc.id} style={{display:"flex",gap:12,marginBottom:14,paddingBottom:14,borderBottom:i<examen.incisos.length-1?"1px solid rgba(255,255,255,0.06)":"none"}}>
-              <div style={{width:28,height:28,borderRadius:8,background:`${c.color}22`,border:`1px solid ${c.color}55`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:13,color:c.color,flexShrink:0}}>{inc.letra.toUpperCase()}</div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:13,lineHeight:1.6,color:"rgba(255,255,255,0.85)"}}>{inc.txt}</div>
-                <div style={{marginTop:6,display:"flex",gap:8,alignItems:"center"}}>
-                  <span style={{fontSize:11,background:`${c.color}18`,color:c.color,border:`1px solid ${c.color}33`,borderRadius:6,padding:"2px 8px"}}>{inc.pts} pts</span>
-                  <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:12,color:respuestas[inc.id]?"#00ff88":"rgba(255,255,255,0.4)"}}>
-                    <input type="checkbox" checked={!!respuestas[inc.id]} onChange={e=>setRespuestas(p=>({...p,[inc.id]:e.target.checked}))} style={{accentColor:"#00ff88",width:14,height:14}}/>
-                    {respuestas[inc.id]?"✓ Completado":"Marcar como completado"}
-                  </label>
-                </div>
-              </div>
+      <div class="section active" id="section-dashboard">
+        <div class="page-header"><div><h2 id="dash-greeting">Bienvenido</h2><p>Resumen de tu actividad</p></div></div>
+        <div class="grid-3" id="dash-stats"></div>
+        <div id="storage-indicator" style="display:none;margin-top:16px">
+          <div class="card" style="padding:16px 20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em">Almacenamiento</div>
+              <div style="font-size:12px;color:var(--text2)" id="storage-text">Calculando...</div>
             </div>
-          ))}
-        </div>
-
-        {/* Botón */}
-        {!confirm?(
-          <button onClick={()=>setConfirm(true)} style={{width:"100%",background:`linear-gradient(90deg,${c.color},#7b2ff7)`,border:"none",borderRadius:12,padding:14,color:"#fff",fontWeight:700,fontSize:15,cursor:"pointer"}}>
-            ✅ Confirmar — ya terminé
-          </button>
-        ):(
-          <div style={{background:"rgba(255,170,0,0.1)",border:"1px solid rgba(255,170,0,0.4)",borderRadius:12,padding:16,textAlign:"center"}}>
-            <div style={{fontSize:14,color:"#ffaa00",marginBottom:6}}>¿Confirmas que ya terminaste el ejercicio?</div>
-            <div style={{fontSize:12,color:"rgba(255,255,255,0.5)",marginBottom:14}}>Recuerda subir tu archivo en el Portal de Tareas.</div>
-            <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-              <button onClick={()=>setConfirm(false)} style={btn()}>Revisar primero</button>
-              <button onClick={enviar} disabled={enviando} style={{background:"#00ff88",border:"none",borderRadius:8,padding:"9px 20px",color:"#000",fontWeight:700,cursor:"pointer",fontSize:13}}>
-                {enviando?"Registrando...":"Sí, confirmar ✓"}
-              </button>
+            <div class="progress-bar" style="height:6px">
+              <div class="progress-fill" id="storage-fill" style="width:0%;transition:width 0.6s"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--text3)">
+              <span id="storage-used">— MB usados</span>
+              <span>1 GB disponible</span>
             </div>
           </div>
-        )}
+        </div>
+        <div style="margin-top:28px">
+          <h3 style="font-size:15px;font-weight:500;margin-bottom:14px;color:var(--text2)">Tareas recientes</h3>
+          <div id="dash-recent"></div>
+        </div>
+      </div>
+
+      <div class="section" id="section-courses">
+        <div class="page-header">
+          <div><h2>Clases</h2><p>Todas tus clases</p></div>
+          <button class="btn btn-accent" onclick="openModal('modal-new-course')" id="btn-new-course" style="display:none">+ Nueva clase</button>
+        </div>
+        <div class="grid-2" id="courses-grid"></div>
+      </div>
+
+      <div class="section" id="section-tasks">
+        <div class="page-header">
+          <div><h2 id="tasks-title">Tareas</h2><p id="tasks-sub">Todas las tareas</p></div>
+          <button class="btn btn-accent" onclick="openModal('modal-new-task')" id="btn-new-task" style="display:none">+ Nueva tarea</button>
+        </div>
+        <div class="tabs" id="tasks-tabs" style="display:none">
+          <button class="tab active" onclick="filterTasks('all',this)">Todas</button>
+          <button class="tab" onclick="filterTasks('pending',this)">Pendientes</button>
+          <button class="tab" onclick="filterTasks('submitted',this)">Entregadas</button>
+          <button class="tab" onclick="filterTasks('graded',this)">Calificadas</button>
+        </div>
+        <div id="tasks-list"></div>
+      </div>
+
+      <div class="section" id="section-submissions">
+        <div class="page-header">
+          <div><h2>Entregas</h2><p>Revisa y califica los trabajos</p></div>
+          <select id="sub-filter-course" onchange="loadSubmissions()" style="width:auto;padding:8px 12px;font-size:13px"><option value="">Todas las clases</option></select>
+        </div>
+        <div id="submissions-list"></div>
+      </div>
+
+      <div class="section" id="section-students">
+        <div class="page-header">
+          <div><h2>Alumnos</h2><p>Gestiona las cuentas</p></div>
+          <button class="btn btn-accent" onclick="openModal('modal-new-student')">+ Nuevo alumno</button>
+        </div>
+        <div id="students-list"></div>
+      </div>
+
+      <div class="section" id="section-chat">
+        <div class="page-header">
+          <div><h2>Chat de clase</h2><p>Mensajes por clase</p></div>
+          <select id="chat-course-select" onchange="loadChat()" style="width:auto;padding:8px 12px;font-size:13px"><option value="">Selecciona una clase...</option></select>
+        </div>
+        <div id="chat-area"><div class="empty-state"><div class="empty-icon">◎</div><div class="empty-title">Selecciona una clase</div></div></div>
+      </div>
+
+      <div class="section" id="section-exams">
+        <div class="page-header">
+          <div><h2>Exámenes en línea</h2><p>Accede a los exámenes de tus cursos</p></div>
+        </div>
+ <div id="exams-list">
+
+  <!-- Laboratorio I -->
+  <div class="card" style="margin-bottom:14px;border-left:3px solid var(--purple)">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="width:44px;height:44px;border-radius:10px;background:var(--purple-dim);border:1px solid rgba(167,139,250,0.25);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📋</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:600;margin-bottom:2px">Portal de Exámenes — Laboratorio I</div>
+        <div style="font-size:12px;color:var(--text2);font-family:var(--mono)">4to Bachillerato en Computación · Ciclo 2026</div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <span class="badge" style="background:var(--bg4);color:var(--text2)">Unidad I · Seguridad Informática</span>
+          <span class="badge" style="background:var(--purple-dim);color:var(--purple)">Unidad II · Privacidad Digital</span>
+        </div>
+      </div>
+      <a href="https://alesso22.github.io/portalexamenes/" target="_blank"
+         style="background:var(--purple-dim);color:var(--purple);border:1px solid rgba(167,139,250,0.3);border-radius:var(--radius);padding:10px 18px;font-size:13px;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;transition:all 0.15s"
+         onmouseover="this.style.background='rgba(167,139,250,0.25)'" onmouseout="this.style.background='var(--purple-dim)'">
+        Ir al examen →
+      </a>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);display:flex;gap:20px;flex-wrap:wrap">
+      <span>⏱ Timer de 40 minutos</span>
+      <span>📨 Envío automático al terminar</span>
+      <span>✅ Corrección instantánea</span>
+      <span>🔑 Selecciona "Laboratorio I" al iniciar</span>
+    </div>
+  </div>
+
+  <!-- Computación I -->
+  <div class="card" style="margin-bottom:14px;border-left:3px solid var(--blue)">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="width:44px;height:44px;border-radius:10px;background:var(--blue-dim);border:1px solid rgba(96,165,250,0.25);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">💻</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:600;margin-bottom:2px">Portal de Exámenes — Computación I</div>
+        <div style="font-size:12px;color:var(--text2);font-family:var(--mono)">4to Bachillerato en Computación · Ciclo 2026</div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <span class="badge" style="background:var(--bg4);color:var(--text2)">Unidad I</span>
+          <span class="badge" style="background:var(--blue-dim);color:var(--blue)">Unidad II</span>
+        </div>
+      </div>
+      <a href="https://alesso22.github.io/portalexamenes/" target="_blank"
+         style="background:var(--blue-dim);color:var(--blue);border:1px solid rgba(96,165,250,0.3);border-radius:var(--radius);padding:10px 18px;font-size:13px;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;transition:all 0.15s"
+         onmouseover="this.style.background='rgba(96,165,250,0.25)'" onmouseout="this.style.background='var(--blue-dim)'">
+        Ir al examen →
+      </a>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);display:flex;gap:20px;flex-wrap:wrap">
+      <span>⏱ Timer de 40 minutos</span>
+      <span>📨 Envío automático al terminar</span>
+      <span>✅ Corrección instantánea</span>
+      <span>🔑 Selecciona "Computación I" al iniciar</span>
+    </div>
+  </div>
+
+  <!-- 4to Bachillerato en Computación -->
+  <div class="card" style="margin-bottom:14px;border-left:3px solid var(--accent)">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="width:44px;height:44px;border-radius:10px;background:var(--accent-dim);border:1px solid rgba(110,231,183,0.25);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🐍</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:600;margin-bottom:2px">Portal de Exámenes — Programación Python</div>
+        <div style="font-size:12px;color:var(--text2);font-family:var(--mono)">4to y 5to Bachillerato en Computación · Ciclo 2026</div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <span class="badge" style="background:var(--bg4);color:var(--text2)">Unidad I · Fundamentos</span>
+          <span class="badge" style="background:var(--accent-dim);color:var(--accent)">Unidad II · Condicionales</span>
+        </div>
+      </div>
+      <a href="https://alesso22.github.io/portalexamenes/" target="_blank"
+         style="background:var(--accent-dim);color:var(--accent);border:1px solid rgba(110,231,183,0.3);border-radius:var(--radius);padding:10px 18px;font-size:13px;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;transition:all 0.15s"
+         onmouseover="this.style.background='rgba(110,231,183,0.2)'" onmouseout="this.style.background='var(--accent-dim)'">
+        Ir al examen →
+      </a>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);display:flex;gap:20px;flex-wrap:wrap">
+      <span>⏱ Timer de 40 minutos</span>
+      <span>📨 Envío automático al terminar</span>
+      <span>✅ Corrección instantánea</span>
+      <span>🔑 Selecciona "Bachillerato en Computación" al iniciar</span>
+    </div>
+  </div>
+
+  <!-- 4to Perito en Computación (C++) -->
+  <div class="card" style="margin-bottom:14px;border-left:3px solid var(--amber)">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="width:44px;height:44px;border-radius:10px;background:var(--amber-dim);border:1px solid rgba(251,191,36,0.25);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">⚙️</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:600;margin-bottom:2px">Portal de Exámenes — Programación C++</div>
+        <div style="font-size:12px;color:var(--text2);font-family:var(--mono)">4to Perito en Computación · Ciclo 2026</div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <span class="badge" style="background:var(--bg4);color:var(--text2)">Unidad I · Variables y operadores</span>
+          <span class="badge" style="background:var(--amber-dim);color:var(--amber)">Unidad II · Condicionales</span>
+        </div>
+      </div>
+      <a href="https://alesso22.github.io/portalexamenes/" target="_blank"
+         style="background:var(--amber-dim);color:var(--amber);border:1px solid rgba(251,191,36,0.3);border-radius:var(--radius);padding:10px 18px;font-size:13px;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;transition:all 0.15s"
+         onmouseover="this.style.background='rgba(251,191,36,0.25)'" onmouseout="this.style.background='var(--amber-dim)'">
+        Ir al examen →
+      </a>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);display:flex;gap:20px;flex-wrap:wrap">
+      <span>⏱ Timer de 40 minutos</span>
+      <span>📨 Envío automático al terminar</span>
+      <span>✅ Corrección instantánea</span>
+      <span>🔑 Selecciona "4to Perito — Programación C++" al iniciar</span>
+    </div>
+  </div>
+
+  <!-- 5to Perito en Computación (Python) -->
+  <div class="card" style="margin-bottom:14px;border-left:3px solid var(--green)">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="width:44px;height:44px;border-radius:10px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🐍</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:600;margin-bottom:2px">Portal de Exámenes — Programación Python</div>
+        <div style="font-size:12px;color:var(--text2);font-family:var(--mono)">5to Perito en Computación · Ciclo 2026</div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <span class="badge" style="background:var(--bg4);color:var(--text2)">Unidad I · Fundamentos</span>
+          <span class="badge" style="background:rgba(16,185,129,0.12);color:var(--green)">Unidad II · Condicionales</span>
+        </div>
+      </div>
+      <a href="https://alesso22.github.io/portalexamenes/" target="_blank"
+         style="background:rgba(16,185,129,0.12);color:var(--green);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius);padding:10px 18px;font-size:13px;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;transition:all 0.15s"
+         onmouseover="this.style.background='rgba(16,185,129,0.22)'" onmouseout="this.style.background='rgba(16,185,129,0.12)'">
+        Ir al examen →
+      </a>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);display:flex;gap:20px;flex-wrap:wrap">
+      <span>⏱ Timer de 40 minutos</span>
+      <span>📨 Envío automático al terminar</span>
+      <span>✅ Corrección instantánea</span>
+      <span>🔑 Selecciona "5to Perito — Programación Python" al iniciar</span>
+    </div>
+  </div>
+
+  <!-- Próximamente -->
+  <div class="card" style="border-style:dashed;text-align:center;padding:28px;color:var(--text3)">
+    <div style="font-size:24px;margin-bottom:8px">＋</div>
+    <div style="font-size:13px;font-weight:500;color:var(--text2);margin-bottom:4px">Más exámenes próximamente</div>
+    <div style="font-size:12px">Se agregarán conforme avance el ciclo escolar</div>
+  </div>
+
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-new-course">
+  <div class="modal">
+    <div class="modal-header"><h3>Nueva clase</h3><button class="modal-close" onclick="closeModal('modal-new-course')">✕</button></div>
+    <div class="field-group"><label>Nombre</label><input type="text" id="nc-name" placeholder="Ej. Programación en Python"></div>
+    <div class="field-group"><label>Descripción (opcional)</label><textarea id="nc-desc" placeholder="Descripción breve..."></textarea></div>
+    <div class="field-group">
+      <label>Color</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="color-opt selected" data-color="#6ee7b7" style="background:#6ee7b7" onclick="selectColor(this)"></div>
+        <div class="color-opt" data-color="#60a5fa" style="background:#60a5fa" onclick="selectColor(this)"></div>
+        <div class="color-opt" data-color="#f87171" style="background:#f87171" onclick="selectColor(this)"></div>
+        <div class="color-opt" data-color="#fbbf24" style="background:#fbbf24" onclick="selectColor(this)"></div>
+        <div class="color-opt" data-color="#a78bfa" style="background:#a78bfa" onclick="selectColor(this)"></div>
+        <div class="color-opt" data-color="#fb923c" style="background:#fb923c" onclick="selectColor(this)"></div>
       </div>
     </div>
-  );
-}
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-new-course')">Cancelar</button>
+      <button class="btn btn-accent" onclick="createCourse()">Crear clase</button>
+    </div>
+  </div>
+</div>
 
-function ExamenGenerico({nombre,cursoId,tipoExamen,onEnviar}){
-  const c=getCurso(cursoId);const examen=EXAM_MAP[cursoId]?.[tipoExamen];
-  const [sec,setSec]=useState(0);const [multiple,setMultiple]=useState({});const [vf,setVf]=useState({});
-  const [completar,setCompletar]=useState({});const [desarrollo,setDesarrollo]=useState({});
-  const [enviado,setEnviado]=useState(false);const [confirm,setConfirm]=useState(false);const [enviando,setEnviando]=useState(false);
-  const {mm,ss,color:tc,agotado}=useTimer(examen?.tiempo||40*60);
-  useEffect(()=>{if(agotado&&!enviado)enviar();},[agotado]);
-  const enviar=async()=>{if(enviando||enviado)return;setEnviando(true);await onEnviar({nombre,cursoId,curso:c.label,tipoExamen,titulo:examen?.titulo,fecha:new Date().toLocaleString("es-GT"),multiple,vf,completar,desarrollo});setEnviado(true);};
-  if(!examen)return<div style={{color:"#ff8080",padding:40,textAlign:"center"}}>Examen no configurado.</div>;
-  if(enviado)return<Enviado nombre={nombre}/>;
-  const hasDes=examen.desarrollo.length>0;
-  const tabs=["Selección Múltiple","Verdadero o Falso","Completar",...(hasDes?["Desarrollo"]:[])];
-  const maxSec=tabs.length-1;
-  return(
-    <div style={{minHeight:"100vh",background:`linear-gradient(135deg,#0a0a1a,${c.dark})`}}>
-      <TopBar cursoId={cursoId} nombre={nombre} mm={mm} ss={ss} timerColor={tc}/>
-      <ProgBar sec={sec} total={maxSec}/>
-      <div style={{background:`${c.bg}`,borderBottom:`1px solid ${c.color}44`,padding:"8px 20px"}}>
-        <div style={{fontWeight:700,color:c.color,fontSize:13}}>{examen.titulo}</div>
-        <div style={{fontSize:11,color:"rgba(255,255,255,0.5)"}}>{examen.subtitulo}</div>
+<div class="modal-overlay" id="modal-new-task">
+  <div class="modal">
+    <div class="modal-header"><h3>Nueva tarea</h3><button class="modal-close" onclick="closeModal('modal-new-task')">✕</button></div>
+    <div class="field-group"><label>Clase</label><select id="nt-course"></select></div>
+    <div class="field-group"><label>Título</label><input type="text" id="nt-title" placeholder="Ej. Ejercicio de ciclos for"></div>
+    <div class="field-group"><label>Instrucciones</label><textarea id="nt-desc" placeholder="Describe qué deben hacer..." style="min-height:100px"></textarea></div>
+    <div class="field-group"><label>Fecha límite</label><input type="date" id="nt-due"></div>
+    <div class="field-group">
+      <label>Material adjunto (opcional)</label>
+      <div class="drop-zone" id="nt-drop" onclick="document.getElementById('nt-file').click()">
+        <input type="file" id="nt-file" onchange="handleTaskFile(event)">
+        <div class="drop-icon">📁</div>
+        <div class="drop-text">Haz clic para adjuntar o <span>arrastra aquí</span></div>
+        <div id="nt-file-name" style="font-size:12px;color:var(--accent);margin-top:8px"></div>
       </div>
-      <TabsBar tabs={tabs} sec={sec} setSec={setSec} color={c.color}/>
-      <div style={{maxWidth:800,margin:"0 auto",padding:"20px 20px 100px"}}>
-        {sec===0&&<><SecHeader title="Selección Múltiple" pts={`${examen.multiple.length} preguntas · 1 pt c/u`} inst="Selecciona la respuesta correcta." color={c.dark}/>{examen.multiple.map((q,i)=><PregMultiple key={q.id} q={q} qi={i} sel={multiple[q.id]} onSel={v=>setMultiple(p=>({...p,[q.id]:v}))} color={c.color}/>)}</>}
-        {sec===1&&<><SecHeader title="Verdadero o Falso" pts={`${examen.vf.length} preguntas · 1 pt c/u`} inst="Selecciona V si es verdadero, F si es falso." color={c.dark}/>{examen.vf.map((q,i)=><PregVF key={q.id} q={q} qi={i} sel={vf[q.id]} onSel={v=>setVf(p=>({...p,[q.id]:v}))}/>)}</>}
-        {sec===2&&<><SecHeader title="Completar espacios" pts={`${examen.completar.preguntas.length} preguntas · 1 pt c/u`} inst="Escribe la palabra correcta del banco." color={c.dark}/><BancoPalabras banco={examen.completar.banco}/>{examen.completar.preguntas.map((q,i)=><PregCompletar key={q.id} q={q} qi={i} val={completar[q.id]||""} onChange={v=>setCompletar(p=>({...p,[q.id]:v}))}/>)}{!hasDes&&<BotonEnviar confirm={confirm} setConfirm={setConfirm} enviando={enviando} enviar={enviar}/>}</>}
-        {sec===3&&hasDes&&<><SecHeader title="Desarrollo" pts={`${examen.desarrollo.reduce((a,q)=>a+q.pts,0)} pts`} inst="Responde con tus propias palabras." color={c.dark}/>{examen.desarrollo.map((q,i)=>(<div key={q.id} style={{...card,marginBottom:16}}><div style={{fontSize:13,lineHeight:1.6,marginBottom:10}}><span style={{fontWeight:700,color:"#ffaa00"}}>{i+1}. ({q.pts} pts)</span> {q.txt}</div><textarea value={desarrollo[q.id]||""} onChange={e=>setDesarrollo(p=>({...p,[q.id]:e.target.value}))} rows={5} placeholder="Escribe tu respuesta aquí..." style={{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:10,padding:"10px 14px",color:"#fff",fontSize:13,outline:"none",resize:"vertical",lineHeight:1.6}}/><div style={{fontSize:11,color:"rgba(255,255,255,0.3)",textAlign:"right",marginTop:4}}>{(desarrollo[q.id]||"").length} chars</div></div>))}<BotonEnviar confirm={confirm} setConfirm={setConfirm} enviando={enviando} enviar={enviar}/></>}
-        <NavBotones sec={sec} setSec={setSec} max={maxSec}/>
+      <div id="nt-prog-wrap" style="display:none;margin-top:8px">
+        <div class="progress-bar"><div class="progress-fill" id="nt-prog-fill" style="width:0%"></div></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px" id="nt-prog-text">Subiendo...</div>
       </div>
     </div>
-  );
-}
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-new-task')">Cancelar</button>
+      <button class="btn btn-accent" onclick="createTask()">Publicar tarea</button>
+    </div>
+  </div>
+</div>
 
-function Bloque({title,color,children}){return(<div style={{...card,marginBottom:12}}><div style={{fontWeight:700,fontSize:13,color,marginBottom:10,borderBottom:"1px solid rgba(255,255,255,0.08)",paddingBottom:8}}>{title}</div>{children}</div>);}
-function ItemDet({num,txt,ok,resp,correcta}){return(<div style={{padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,0.05)",fontSize:12}}><div style={{color:"rgba(255,255,255,0.7)",marginBottom:3,whiteSpace:"pre-line"}}>{num}. {txt}</div><span style={{color:ok?"#00ff88":"#ff8080"}}>{ok?"✓":"✗"} {resp}</span>{correcta&&<span style={{color:"rgba(255,255,255,0.4)",marginLeft:10}}>→ {correcta}</span>}</div>);}
+<div class="modal-overlay" id="modal-new-student">
+  <div class="modal">
+    <div class="modal-header"><h3>Nuevo alumno</h3><button class="modal-close" onclick="closeModal('modal-new-student')">✕</button></div>
+    <div class="field-group"><label>Nombre completo</label><input type="text" id="ns-name" placeholder="Nombre del alumno"></div>
+    <div class="field-group"><label>Correo</label><input type="email" id="ns-email" placeholder="alumno@correo.com"></div>
+    <div class="field-group"><label>Contraseña inicial</label><input type="text" id="ns-pass" placeholder="Ej. alumno123"></div>
+    <div class="field-group"><label>Grado</label><input type="text" id="ns-grade" placeholder="Ej. 5to PC, 4to Perito Contador"></div>
+    <div class="field-group">
+      <label>Clases inscritas</label>
+      <div id="ns-courses" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-new-student')">Cancelar</button>
+      <button class="btn btn-accent" onclick="createStudent()">Crear alumno</button>
+    </div>
+  </div>
+</div>
 
-function DetalleRespuesta({r,onBack}){
-  const examen=EXAM_MAP[r.cursoId]?.[r.tipoExamen];const auto=calcAuto(r,examen);const max=maxAuto(examen);const c=getCurso(r.cursoId)||{color:"#aaa"};
-  return(<div><button onClick={onBack} style={{...btn(),marginBottom:14}}>← Volver</button><div style={{...card,display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:10,marginBottom:14}}><div><div style={{fontSize:18,fontWeight:800}}>{r.nombre}</div><div style={{fontSize:13,color:"rgba(255,255,255,0.5)"}}>{r.curso} · {r.titulo} · {r.fecha}</div></div><div style={{textAlign:"right"}}><div style={{fontSize:20,fontWeight:800,color:c.color}}>{auto}/{max} <span style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>pts automáticos</span></div>{examen?.desarrollo.length>0&&<div style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>+ desarrollo manual</div>}</div></div>
-    {examen&&<><Bloque title="Selección Múltiple" color="#00d4ff">{examen.multiple.map((q,i)=>{const resp=r.multiple?.[q.id];const ok=resp===q.correcta;return<ItemDet key={q.id} num={i+1} txt={q.txt} ok={ok} resp={resp!=null?`${["A","B","C","D"][resp]}) ${q.opts[resp]}`:"Sin responder"} correcta={ok?null:`${["A","B","C","D"][q.correcta]}) ${q.opts[q.correcta]}`}/>;})}</Bloque><Bloque title="Verdadero o Falso" color="#a78bff">{examen.vf.map((q,i)=>{const resp=r.vf?.[q.id];const ok=resp===q.correcta;return<ItemDet key={q.id} num={i+1} txt={q.txt} ok={ok} resp={resp==null?"Sin responder":resp?"Verdadero":"Falso"} correcta={ok?null:q.correcta?"Verdadero":"Falso"}/>;})}</Bloque><Bloque title="Completar" color="#ffaa00">{examen.completar.preguntas.map((q,i)=>{const resp=(r.completar?.[q.id]||"").toLowerCase().trim();const ok=resp===q.correcta.toLowerCase();return<ItemDet key={q.id} num={i+1} txt={`${q.pre} ___ ${q.post}`} ok={ok} resp={r.completar?.[q.id]||"Sin responder"} correcta={ok?null:q.correcta}/>;})}</Bloque>{examen.desarrollo.length>0&&<Bloque title="Desarrollo — revisar manualmente" color="#ff8080">{examen.desarrollo.map((q,i)=>(<div key={q.id} style={{padding:"10px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}><div style={{fontSize:12,color:"rgba(255,255,255,0.5)",marginBottom:6}}>{i+1}. ({q.pts} pts) {q.txt}</div><div style={{background:"rgba(255,255,255,0.05)",borderRadius:8,padding:"10px 14px",fontSize:13,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{r.desarrollo?.[q.id]||<span style={{color:"rgba(255,255,255,0.3)",fontStyle:"italic"}}>Sin respuesta</span>}</div></div>))}</Bloque>}</>}
-  </div>);
-}
-
-function PanelMaestro({onSalir}){
-  const [respuestas,setRespuestas]=useState([]);const [estado,setEstado]=useState({});const [filtroC,setFiltroC]=useState("todos");const [filtroT,setFiltroT]=useState("todos");const [detalle,setDetalle]=useState(null);const [cargando,setCargando]=useState(true);const [guardando,setGuardando]=useState(false);
-  useEffect(()=>{(async()=>{const [r,e]=await Promise.all([leerRespuestas(),leerEstado()]);setRespuestas(r);setEstado(e);setCargando(false);})();},[]);
-  const toggleExamen=async(cursoId,tipo)=>{const key=`${cursoId}_${tipo}`;const nuevo={...estado,[key]:!(estado[key]||false)};setGuardando(true);await guardarEstado(nuevo);setEstado(nuevo);setGuardando(false);};
-  const filtradas=respuestas.filter(r=>(filtroC==="todos"||r.cursoId===filtroC)&&(filtroT==="todos"||r.tipoExamen===filtroT));
-  if(detalle)return(<div style={{minHeight:"100vh",background:"#0d1117",color:"#fff"}}><div style={{background:"rgba(0,0,0,0.5)",borderBottom:"1px solid rgba(255,255,255,0.1)",padding:"12px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{fontWeight:800,fontSize:16}}>📊 Panel del Catedrático</div><button onClick={onSalir} style={btn()}>← Salir</button></div><div style={{padding:"20px 24px"}}><DetalleRespuesta r={detalle} onBack={()=>setDetalle(null)}/></div></div>);
-  
-  // Exámenes disponibles por curso incluyendo parcial_u2
-  const getTipos = (cid) => (cid==="mad1"||cid==="prog4"||cid==="py5")?["parcial","parcial_u2","final"]:["parcial","final"];
-  const getTipoLabel = (tipo) => tipo==="parcial"?"📝 Parcial Unidad I":tipo==="parcial_u2"?"💻 Parcial Unidad II":"📋 Examen Final";
-
-  return(
-    <div style={{minHeight:"100vh",background:"#0d1117",color:"#fff"}}>
-      <div style={{background:"rgba(0,0,0,0.5)",borderBottom:"1px solid rgba(255,255,255,0.1)",padding:"12px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div><div style={{fontWeight:800,fontSize:16}}>📊 Panel del Catedrático</div><div style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>{respuestas.length} respuestas{guardando?" · Guardando...":""}</div></div>
-        <button onClick={onSalir} style={btn()}>← Salir</button>
-      </div>
-      <div style={{padding:"20px 24px"}}>
-        <div style={{...card,marginBottom:20,border:"1px solid rgba(0,212,255,0.2)"}}>
-          <div style={{fontWeight:700,fontSize:14,color:"#00d4ff",marginBottom:14}}>🎛️ Activar / Desactivar exámenes &nbsp;<span style={{fontSize:11,color:"rgba(255,255,255,0.4)",fontWeight:400}}>Solo el examen activo aparece disponible para los alumnos</span></div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10}}>
-            {CURSOS.map(c=>(
-              <div key={c.id} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:12}}>
-                <div style={{fontSize:12,fontWeight:700,color:c.color,marginBottom:8}}>{c.label}</div>
-                {getTipos(c.id).map(tipo=>{
-                  const activo=estado[`${c.id}_${tipo}`]||false;const examen=EXAM_MAP[c.id]?.[tipo];
-                  return(<div key={tipo} style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-                    <div><div style={{fontSize:12,color:activo?"#fff":"rgba(255,255,255,0.5)"}}>{getTipoLabel(tipo)}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.3)"}}>{examen?.subtitulo||"—"}</div></div>
-                    <button onClick={()=>toggleExamen(c.id,tipo)} style={{background:activo?"rgba(0,255,136,0.2)":"rgba(255,255,255,0.08)",border:activo?"1px solid #00ff88":"1px solid rgba(255,255,255,0.15)",borderRadius:20,padding:"4px 12px",color:activo?"#00ff88":"rgba(255,255,255,0.5)",cursor:"pointer",fontSize:12,fontWeight:700,minWidth:80}}>
-                      {activo?"🟢 Activo":"⚫ Cerrado"}
-                    </button>
-                  </div>);
-                })}
-              </div>
-            ))}
-          </div>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
-          {[{label:"Total enviados",val:respuestas.length,color:"#00d4ff"},{label:"Parciales",val:respuestas.filter(r=>r.tipoExamen==="parcial"||r.tipoExamen==="parcial_u2").length,color:"#a78bff"},{label:"Finales",val:respuestas.filter(r=>r.tipoExamen==="final").length,color:"#00ff88"},{label:"Exámenes activos",val:Object.values(estado).filter(Boolean).length,color:"#ffaa00"}].map(s=>(<div key={s.label} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:12,padding:"12px",textAlign:"center"}}><div style={{fontSize:20,fontWeight:800,color:s.color}}>{s.val}</div><div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginTop:3}}>{s.label}</div></div>))}
-        </div>
-        <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-          <button onClick={()=>setFiltroC("todos")} style={{background:filtroC==="todos"?"rgba(0,212,255,0.15)":"rgba(255,255,255,0.05)",border:filtroC==="todos"?"1px solid #00d4ff":"1px solid rgba(255,255,255,0.1)",borderRadius:20,padding:"6px 14px",color:filtroC==="todos"?"#00d4ff":"rgba(255,255,255,0.6)",cursor:"pointer",fontSize:12}}>Todos ({respuestas.length})</button>
-          {CURSOS.map(c=><button key={c.id} onClick={()=>setFiltroC(c.id)} style={{background:filtroC===c.id?c.bg:"rgba(255,255,255,0.05)",border:filtroC===c.id?`1px solid ${c.color}`:"1px solid rgba(255,255,255,0.1)",borderRadius:20,padding:"6px 14px",color:filtroC===c.id?c.color:"rgba(255,255,255,0.6)",cursor:"pointer",fontSize:12}}>{c.label.split("—")[1]?.trim()||c.label} ({respuestas.filter(r=>r.cursoId===c.id).length})</button>)}
-        </div>
-        <div style={{display:"flex",gap:8,marginBottom:16}}>
-          {[["todos","Todos"],["parcial","📝 Parciales U.I"],["parcial_u2","💻 Parciales U.II"],["final","📋 Finales"]].map(([v,l])=><button key={v} onClick={()=>setFiltroT(v)} style={{background:filtroT===v?"rgba(167,139,250,0.15)":"rgba(255,255,255,0.05)",border:filtroT===v?"1px solid #a78bff":"1px solid rgba(255,255,255,0.1)",borderRadius:20,padding:"5px 12px",color:filtroT===v?"#a78bff":"rgba(255,255,255,0.6)",cursor:"pointer",fontSize:12}}>{l}</button>)}
-        </div>
-        {cargando?<div style={{textAlign:"center",padding:40,color:"rgba(255,255,255,0.4)"}}>Cargando...</div>:filtradas.length===0?<div style={{textAlign:"center",padding:40,color:"rgba(255,255,255,0.3)"}}><div style={{fontSize:36,marginBottom:8}}>📭</div><div>No hay respuestas con estos filtros.</div></div>:(
-          <div>
-            <div style={{display:"grid",gridTemplateColumns:"2fr 2fr 1fr 1fr 1fr 70px",gap:8,padding:"6px 12px",fontSize:11,color:"rgba(255,255,255,0.4)",fontWeight:700,textTransform:"uppercase"}}><span>Alumno</span><span>Curso</span><span>Tipo</span><span>Hora</span><span>Auto</span><span></span></div>
-            {filtradas.map((r,i)=>{
-              const c=getCurso(r.cursoId)||{color:"#aaa",label:r.curso||"—",bg:"rgba(255,255,255,0.08)"};
-              const examen=EXAM_MAP[r.cursoId]?.[r.tipoExamen];const auto=calcAuto(r,examen);const max=maxAuto(examen);const pct=max>0?Math.round((auto/max)*100):0;
-              const tipoLabel=r.tipoExamen==="parcial"?"P.U.I":r.tipoExamen==="parcial_u2"?"P.U.II 💻":"Final";
-              const tipoBg=r.tipoExamen==="parcial"?"rgba(167,139,250,0.15)":r.tipoExamen==="parcial_u2"?"rgba(247,151,30,0.15)":"rgba(0,255,136,0.1)";
-              const tipoColor=r.tipoExamen==="parcial"?"#a78bff":r.tipoExamen==="parcial_u2"?"#f7971e":"#00ff88";
-              return(<div key={i} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:10,padding:"10px 12px",display:"grid",gridTemplateColumns:"2fr 2fr 1fr 1fr 1fr 70px",gap:8,alignItems:"center",marginBottom:6}}>
-                <span style={{fontWeight:600,fontSize:13}}>{r.nombre||"—"}</span>
-                <span style={{fontSize:11,color:c.color,background:c.bg,borderRadius:6,padding:"2px 8px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.label.split("—")[1]?.trim()||c.label}</span>
-                <span style={{fontSize:11,background:tipoBg,color:tipoColor,borderRadius:6,padding:"2px 8px",textAlign:"center"}}>{tipoLabel}</span>
-                <span style={{fontSize:11,color:"rgba(255,255,255,0.4)"}}>{(r.fecha||"").split(",")[1]||(r.fecha||"")}</span>
-                <span style={{fontSize:13,fontWeight:700,color:pct>=70?"#00ff88":pct>=50?"#ffaa00":"#ff8080"}}>{auto}/{max}</span>
-                <button onClick={()=>setDetalle(r)} style={{...btn({padding:"5px 10px",fontSize:12}),color:"#00d4ff",borderColor:"rgba(0,212,255,0.3)",background:"rgba(0,212,255,0.1)"}}>Ver →</button>
-              </div>);
-            })}
-          </div>
-        )}
+<div class="modal-overlay" id="modal-task-detail">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header"><h3 id="td-title">Tarea</h3><button class="modal-close" onclick="closeModal('modal-task-detail')">✕</button></div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:6px;font-family:var(--mono)" id="td-meta"></div>
+      <p id="td-desc" style="font-size:14px;color:var(--text2);line-height:1.65"></p>
+    </div>
+    <div id="td-material" style="display:none;margin-bottom:16px">
+      <div class="material-item">
+        <div class="file-icon" style="background:var(--blue-dim)">📎</div>
+        <div class="file-info"><div class="file-name" id="td-mat-name">Material</div><div class="file-meta">Archivo del profesor</div></div>
+        <a class="btn btn-ghost btn-sm" id="td-mat-link" href="#" target="_blank">↓ Descargar</a>
       </div>
     </div>
-  );
-}
-
-function Login({onStart}){
-  const [nombre,setNombre]=useState("");const [cursoId,setCursoId]=useState("");const [pass,setPass]=useState("");const [modo,setModo]=useState("alumno");const [err,setErr]=useState("");const [estado,setEstado]=useState({});const [cargando,setCargando]=useState(true);
-  useEffect(()=>{leerEstado().then(e=>{setEstado(e);setCargando(false);});},[]);
-
-  const TIPO_LABEL={parcial:"📝 Parcial U.I",parcial_u2:"📝 Parcial Unidad II",final:"📋 Examen Final"};
-
-  const submit=()=>{
-    if(modo==="maestro"){if(pass!==PASS_MAESTRO)return setErr("Contraseña incorrecta.");return onStart("__MAESTRO__","maestro","maestro");}
-    if(!nombre.trim())return setErr("Escribe tu nombre completo.");
-    if(!cursoId)return setErr("Selecciona tu curso.");
-    // Buscar cualquier tipo activo para el curso (parcial, parcial_u2, final)
-    const tipos=["parcial","parcial_u2","final"];
-    const tipo=tipos.find(t=>estado[`${cursoId}_${t}`]);
-    if(!tipo)return setErr("No hay ningún examen activo para tu curso en este momento.");
-    setErr("");onStart(nombre.trim(),cursoId,tipo);
-  };
-
-  const cursosConExamen=CURSOS.filter(c=>["parcial","parcial_u2","final"].some(t=>estado[`${c.id}_${t}`]));
-
-  return(
-    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0a0a1a,#0a1628)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <div style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,padding:"40px 36px",width:"100%",maxWidth:500,color:"#fff"}}>
-        <div style={{textAlign:"center",marginBottom:24}}><div style={{fontSize:38,marginBottom:8}}>🏫</div><div style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>Liceo Santa María · Ciclo 2026</div><h1 style={{fontSize:22,fontWeight:800,background:"linear-gradient(90deg,#00d4ff,#7b2ff7)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",margin:"6px 0"}}>Plataforma de Exámenes</h1></div>
-        <div style={{display:"flex",gap:6,marginBottom:20,background:"rgba(255,255,255,0.05)",borderRadius:10,padding:4}}>{["alumno","maestro"].map(m=><button key={m} onClick={()=>{setModo(m);setErr("");}} style={{flex:1,background:modo===m?"rgba(0,212,255,0.2)":"transparent",border:modo===m?"1px solid rgba(0,212,255,0.4)":"1px solid transparent",borderRadius:8,padding:"7px",color:modo===m?"#00d4ff":"rgba(255,255,255,0.5)",cursor:"pointer",fontSize:13,fontWeight:modo===m?700:400}}>{m==="alumno"?"👨‍🎓 Alumno":"👩‍🏫 Maestro"}</button>)}</div>
-        {modo==="alumno"?(<>
-          <div style={{marginBottom:14}}><label style={{fontSize:12,color:"rgba(255,255,255,0.6)",display:"block",marginBottom:6}}>Nombre completo</label><input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="Ej: María García López" style={{width:"100%",background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:10,padding:"10px 14px",color:"#fff",fontSize:14,outline:"none"}}/></div>
-          <div style={{marginBottom:12}}><label style={{fontSize:12,color:"rgba(255,255,255,0.6)",display:"block",marginBottom:6}}>Selecciona tu curso</label>
-            {cargando?<div style={{fontSize:13,color:"rgba(255,255,255,0.4)",textAlign:"center",padding:12}}>Verificando exámenes disponibles...</div>
-            :cursosConExamen.length===0?<div style={{background:"rgba(255,170,0,0.1)",border:"1px solid rgba(255,170,0,0.3)",borderRadius:10,padding:"12px 16px",fontSize:13,color:"#ffaa00",textAlign:"center"}}>⏳ No hay exámenes activos en este momento.<br/><span style={{fontSize:12,opacity:.7}}>Tu catedrático activará el examen cuando sea el momento.</span></div>
-            :<div style={{display:"flex",flexDirection:"column",gap:8}}>{cursosConExamen.map(c=>{
-              const tipos=["parcial","parcial_u2","final"];
-              const tipo=tipos.find(t=>estado[`${c.id}_${t}`]);
-              const examen=EXAM_MAP[c.id]?.[tipo];
-              return(<button key={c.id} onClick={()=>setCursoId(c.id)} style={{background:cursoId===c.id?c.bg:"rgba(255,255,255,0.04)",border:`1px solid ${cursoId===c.id?c.color:"rgba(255,255,255,0.1)"}`,borderRadius:10,padding:"10px 16px",color:cursoId===c.id?c.color:"rgba(255,255,255,0.7)",cursor:"pointer",fontSize:13,textAlign:"left",fontWeight:cursoId===c.id?700:400,transition:"all .2s"}}><div>{c.label}</div><div style={{fontSize:11,opacity:.7,marginTop:2}}>{TIPO_LABEL[tipo]||tipo} · {examen?.subtitulo}</div></button>);
-            })}</div>}
-          </div>
-        </>):<div style={{marginBottom:18}}><label style={{fontSize:12,color:"rgba(255,255,255,0.6)",display:"block",marginBottom:6}}>Contraseña del catedrático</label><input type="password" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} placeholder="••••••••" style={{width:"100%",background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:10,padding:"10px 14px",color:"#fff",fontSize:14,outline:"none"}}/></div>}
-        {err&&<div style={{background:"rgba(255,80,80,0.15)",border:"1px solid rgba(255,80,80,0.3)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#ff8080",marginBottom:12}}>{err}</div>}
-        <button onClick={submit} disabled={modo==="alumno"&&cargando} style={{width:"100%",background:"linear-gradient(90deg,#00d4ff,#7b2ff7)",border:"none",borderRadius:12,padding:"12px",color:"#fff",fontWeight:700,fontSize:15,cursor:"pointer",marginTop:6,opacity:modo==="alumno"&&cargando?0.5:1}}>{modo==="alumno"?"Iniciar examen →":"Entrar al panel →"}</button>
+    <div id="td-submit-area">
+      <div class="divider"></div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:12px">Mis entregas</div>
+      <div id="td-grade-display" style="display:none;margin-bottom:14px">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Calificación</div>
+        <div style="font-size:28px;font-weight:600;color:var(--accent);font-family:var(--mono)" id="td-grade-val"></div>
+        <div style="font-size:13px;color:var(--text2);margin-top:6px" id="td-grade-comment"></div>
+      </div>
+      <div id="td-my-subs-list" style="margin-bottom:12px"></div>
+      <div id="td-upload-area">
+        <div class="drop-zone" id="td-drop" onclick="document.getElementById('td-file').click()">
+          <input type="file" id="td-file" onchange="handleSubmitFile(event)">
+          <div class="drop-icon">⬆</div>
+          <div class="drop-text">Sube tu <span>Excel, código o PDF</span></div>
+          <div id="td-file-name" style="font-size:12px;color:var(--accent);margin-top:8px"></div>
+        </div>
+        <div id="td-prog-wrap" style="display:none;margin-top:10px">
+          <div class="progress-bar"><div class="progress-fill" id="td-prog-fill" style="width:0%"></div></div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px" id="td-prog-text">Subiendo...</div>
+        </div>
+        <button class="btn btn-accent" onclick="submitTask()" style="margin-top:12px;width:100%">⬆ Agregar entrega</button>
       </div>
     </div>
-  );
+    <div id="td-grade-area" style="display:none">
+      <div class="divider"></div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:12px">Entregas de alumnos</div>
+      <div id="td-subs-for-grade"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-grade">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header"><h3>Calificar entrega</h3><button class="modal-close" onclick="closeModal('modal-grade')">✕</button></div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px" id="grade-student-name"></div>
+    <div class="field-group"><label>Nota (0–100)</label><input type="number" id="grade-val" min="0" max="100" placeholder="85"></div>
+    <div class="field-group"><label>Comentario (opcional)</label><textarea id="grade-comment" placeholder="Retroalimentación para el alumno..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-grade')">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveGrade()">Guardar nota</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Edit Course Modal -->
+<div class="modal-overlay" id="modal-edit-course">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header"><h3>Editar clase</h3><button class="modal-close" onclick="closeModal('modal-edit-course')">✕</button></div>
+    <input type="hidden" id="edit-course-id">
+    <div class="field-group"><label>Nombre</label><input type="text" id="edit-course-name" placeholder="Nombre de la clase"></div>
+    <div class="field-group"><label>Descripción (opcional)</label><textarea id="edit-course-desc" placeholder="Descripción breve..."></textarea></div>
+    <div class="field-group">
+      <label>Color</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="color-opt selected" data-color="#6ee7b7" data-target="edit" style="background:#6ee7b7" onclick="selectEditColor(this)"></div>
+        <div class="color-opt" data-color="#60a5fa" data-target="edit" style="background:#60a5fa" onclick="selectEditColor(this)"></div>
+        <div class="color-opt" data-color="#f87171" data-target="edit" style="background:#f87171" onclick="selectEditColor(this)"></div>
+        <div class="color-opt" data-color="#fbbf24" data-target="edit" style="background:#fbbf24" onclick="selectEditColor(this)"></div>
+        <div class="color-opt" data-color="#a78bfa" data-target="edit" style="background:#a78bfa" onclick="selectEditColor(this)"></div>
+        <div class="color-opt" data-color="#fb923c" data-target="edit" style="background:#fb923c" onclick="selectEditColor(this)"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-course')">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveEditCourse()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Student Modal -->
+<div class="modal-overlay" id="modal-edit-student">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header"><h3>Editar alumno</h3><button class="modal-close" onclick="closeModal('modal-edit-student')">✕</button></div>
+    <input type="hidden" id="edit-student-id">
+    <div class="field-group"><label>Nombre completo</label><input type="text" id="edit-student-name" placeholder="Nombre del alumno"></div>
+    <div class="field-group"><label>Grado</label><input type="text" id="edit-student-grade" placeholder="Ej. 5to PC"></div>
+    <div class="field-group"><label>Nueva contraseña (opcional)</label><input type="text" id="edit-student-pass" placeholder="Dejar vacío para no cambiar"></div>
+    <div class="field-group">
+      <label>Clases inscritas</label>
+      <div id="edit-student-courses" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-student')">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveEditStudent()">Guardar</button>
+    </div>
+  </div>
+</div>
+<script>
+const SUPA_URL='https://rkructjezzlpwlqvsrdv.supabase.co';
+const SUPA_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrcnVjdGplenpscHdscXZzcmR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4OTE5NjUsImV4cCI6MjA5MTQ2Nzk2NX0.emUiazok4NMxIN0X_ddVDIUOuhitOMGNZq1CKPmj0Ck';
+const SUPA_SERVICE='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrcnVjdGplenpscHdscXZzcmR2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTg5MTk2NSwiZXhwIjoyMDkxNDY3OTY1fQ.qyrO8jmq_cwCNgaMttR63FnUijK1nr4w2AiWlsSiItw';
+
+const{createClient}=supabase;
+const db=createClient(SUPA_URL,SUPA_ANON);
+const adminDb=createClient(SUPA_URL,SUPA_SERVICE,{auth:{autoRefreshToken:false,persistSession:false}});
+
+let currentUser=null,currentProfile=null;
+let allCourses=[],allTasks=[];
+let selectedColor='#6ee7b7';
+let taskFileToUpload=null,submitFileToUpload=null;
+let currentTaskDetail=null,currentSubmissionForGrade=null;
+let currentTaskFilter='all',currentCourseTasks=null;
+let chatChannel=null;
+
+window.onload=()=>{
+  db.auth.onAuthStateChange(async(event,session)=>{
+    if(event==='INITIAL_SESSION'&&session?.user&&!currentProfile){
+      currentUser=session.user;
+      const{data}=await db.from('profiles').select('*').eq('id',session.user.id).single();
+      currentProfile=data;
+      if(currentProfile) showApp();
+    } else if(event==='SIGNED_OUT'){
+      currentUser=null;currentProfile=null;
+      document.getElementById('app').style.display='none';
+      document.getElementById('login-screen').style.display='flex';
+    }
+  });
+};
+
+let isRegisterMode=false;
+function toggleRegister(){
+  isRegisterMode=!isRegisterMode;
+  document.getElementById('login-title').textContent=isRegisterMode?'Crear cuenta':'Iniciar sesión';
+  document.getElementById('login-sub').textContent=isRegisterMode?'Solo para el profesor':'Plataforma de clases y entregas';
+  document.getElementById('register-field').style.display=isRegisterMode?'block':'none';
+  document.getElementById('login-btn').textContent=isRegisterMode?'Crear cuenta':'Entrar';
+  document.getElementById('login-toggle').innerHTML=isRegisterMode
+    ?'¿Ya tienes cuenta? <a onclick="toggleRegister()">Iniciar sesión</a>'
+    :'¿Primera vez? <a onclick="toggleRegister()">Crear cuenta de profesor</a>';
 }
 
-function App(){
-  const [vista,setVista]=useState("login");const [usuario,setUsuario]=useState(null);
-  const handleStart=(nombre,cursoId,tipo)=>{if(nombre==="__MAESTRO__"){setVista("maestro");return;}setUsuario({nombre,cursoId,tipo});setVista("examen");};
-  const handleEnviar=async resp=>{await guardarRespuesta(resp);};
-  if(vista==="examen"&&usuario){
-    const exDef=EXAM_MAP[usuario.cursoId]?.[usuario.tipo];
-    if(exDef?.tipo==="practico")return<ExamenPractico nombre={usuario.nombre} cursoId={usuario.cursoId} tipoExamen={usuario.tipo} onEnviar={handleEnviar}/>;
-    return<ExamenGenerico nombre={usuario.nombre} cursoId={usuario.cursoId} tipoExamen={usuario.tipo} onEnviar={handleEnviar}/>;
+async function doLogin(){
+  const email=v('login-email'),pass=v('login-pass');
+  if(!email||!pass){toast('Completa los campos','error');return;}
+  const btn=document.getElementById('login-btn');
+  const loading=document.getElementById('login-loading');
+  btn.disabled=true;btn.style.opacity='0.6';loading.style.display='block';
+  try{
+    if(isRegisterMode){
+      const name=v('login-name');
+      if(!name){toast('Ingresa tu nombre','error');return;}
+      const{data,error}=await db.auth.signUp({email,password:pass});
+      if(error){toast(error.message,'error');return;}
+      await db.from('profiles').insert({id:data.user.id,name,email,role:'teacher'});
+      currentUser=data.user;
+      const{data:prof}=await db.from('profiles').select('*').eq('id',data.user.id).single();
+      currentProfile=prof;
+      toast('Cuenta creada ✓','success');
+      showApp();
+    } else {
+      const{data,error}=await db.auth.signInWithPassword({email,password:pass});
+      if(error){toast('Correo o contraseña incorrectos','error');return;}
+      currentUser=data.user;
+      const{data:prof}=await db.from('profiles').select('*').eq('id',data.user.id).single();
+      currentProfile=prof;
+      if(!currentProfile){toast('No se encontró el perfil de usuario','error');return;}
+      showApp();
+    }
+  } catch(e){
+    toast('Error: '+e.message,'error');
+  } finally {
+    btn.disabled=false;btn.style.opacity='1';loading.style.display='none';
   }
-  if(vista==="maestro")return<PanelMaestro onSalir={()=>setVista("login")}/>;
-  return<Login onStart={handleStart}/>;
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+async function doLogout(){currentUser=null;currentProfile=null;allCourses=[];allTasks=[];document.getElementById("app").style.display="none";document.getElementById("login-screen").style.display="flex";set("login-email","");set("login-pass","");await db.auth.signOut();}
+
+async function showApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  const isT=currentProfile.role==='teacher';
+  const ini=currentProfile.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('sb-name').textContent=currentProfile.name;
+  document.getElementById('sb-role').textContent=isT?'profesor':(currentProfile.grade_level||'alumno');
+  document.getElementById('sb-avatar').textContent=ini;
+  if(isT){
+    document.getElementById('sb-avatar').classList.add('teacher');
+    document.getElementById('teacher-nav').style.display='block';document.getElementById('btn-new-course').style.display='flex';document.getElementById('btn-new-task').style.display='flex';
+    document.getElementById('btn-new-course').style.display='flex';
+    document.getElementById('btn-new-task').style.display='flex';
+  } else {
+    document.getElementById('tasks-tabs').style.display='flex';
+  }
+  await loadCourses();
+  loadDashboard();
+}
+
+async function loadCourses(){
+  const isT=currentProfile.role==='teacher';
+  if(isT){
+    const{data}=await db.from('courses').select('*').eq('teacher_id',currentUser.id).order('created_at');
+    allCourses=data||[];
+  } else {
+    const{data:en}=await db.from('enrollments').select('course_id').eq('student_id',currentUser.id);
+    if(!en?.length){allCourses=[];}
+    else{const{data}=await db.from('courses').select('*').in('id',en.map(e=>e.course_id));allCourses=data||[];}
+  }
+  renderSidebarCourses();renderCoursesGrid();populateCourseSelects();
+}
+
+function renderSidebarCourses(){
+  document.getElementById('sidebar-courses').innerHTML=
+    `<div class="sidebar-section-label" style="padding:0 0 4px">Mis Clases</div>`+
+    allCourses.map(c=>`<div class="course-item" onclick="showSection('tasks');filterByClass('${c.id}')"><span class="course-dot" style="background:${c.color||'#6ee7b7'}"></span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</span></div>`).join('');
+}
+
+function renderCoursesGrid(){
+  const g=document.getElementById('courses-grid');
+  if(!allCourses.length){g.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">◫</div><div class="empty-title">No hay clases aún</div></div>`;return;}
+  g.innerHTML=allCourses.map(c=>`
+    <div class="card card-course" onclick="openCourse('${c.id}')">
+      <div style="height:3px;background:${c.color||'#6ee7b7'};position:absolute;top:0;left:0;right:0;border-radius:var(--radius-lg) var(--radius-lg) 0 0"></div>
+      <div class="card-course-header">
+        <div class="course-icon" style="background:${hexAlpha(c.color||'#6ee7b7',.12)}">${getCourseEmoji(c.name)}</div>
+        <div style="flex:1;min-width:0"><h3>${c.name}</h3><div class="meta">${c.description||'Sin descripción'}</div></div>
+        <div style="display:flex;gap:6px;flex-shrink:0" onclick="event.stopPropagation()">
+          <button class="btn btn-ghost btn-sm" onclick="openEditCourse('${c.id}')">Editar</button>
+          <button class="btn btn-sm" style="background:var(--red-dim);color:var(--red);border:1px solid rgba(248,113,113,0.25)" onclick="deleteCourse('${c.id}',this.dataset.name)" data-name="${c.name}">✕</button>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div class="stat"><strong id="ct-${c.id}">—</strong> tareas</div>
+        <div class="stat"><strong id="cs-${c.id}">—</strong> alumnos</div>
+      </div>
+    </div>`).join('');
+  allCourses.forEach(async c=>{
+    const{count:tc}=await db.from('tasks').select('*',{count:'exact',head:true}).eq('course_id',c.id);
+    const{count:sc}=await db.from('enrollments').select('*',{count:'exact',head:true}).eq('course_id',c.id);
+    const te=document.getElementById('ct-'+c.id),se=document.getElementById('cs-'+c.id);
+    if(te)te.textContent=tc||0;if(se)se.textContent=sc||0;
+  });
+}
+
+function populateCourseSelects(){
+  ['nt-course','chat-course-select','sub-filter-course'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    const pre=id==='sub-filter-course'?'<option value="">Todas las clases</option>':id==='chat-course-select'?'<option value="">Selecciona una clase...</option>':'';
+    el.innerHTML=pre+allCourses.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  });
+  const ns=document.getElementById('ns-courses');
+  if(ns)ns.innerHTML=allCourses.map(c=>`<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;background:var(--bg3);padding:4px 10px;border-radius:6px;border:1px solid var(--border)"><input type="checkbox" class="ns-cb" value="${c.id}"> ${c.name}</label>`).join('');
+}
+
+async function createCourse(){
+  const name=v('nc-name'),desc=v('nc-desc');
+  if(!name){toast('Ingresa el nombre','error');return;}
+  const{error}=await db.from('courses').insert({name,description:desc,color:selectedColor,teacher_id:currentUser.id});
+  if(error){toast(error.message,'error');return;}
+  closeModal('modal-new-course');set('nc-name','');set('nc-desc','');
+  await loadCourses();toast('Clase creada ✓','success');
+}
+
+function openCourse(id){showSection('tasks');filterByClass(id);}
+function filterByClass(id){
+  currentCourseTasks=id;
+  currentTaskFilter='all';
+  document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));
+  const firstTab=document.querySelector('.tabs .tab');if(firstTab)firstTab.classList.add('active');
+  loadTasks(id);
+  const c=allCourses.find(x=>x.id===id);
+  if(c){document.getElementById('tasks-title').textContent=c.name;document.getElementById('tasks-sub').textContent='Tareas de esta clase';}
+}
+
+async function loadTasks(courseId=null){
+  currentCourseTasks=courseId;
+  const isT=currentProfile.role==='teacher';
+  let q=db.from('tasks').select('*').order('created_at',{ascending:false});
+  if(courseId)q=q.eq('course_id',courseId);
+  else if(isT)q=q.eq('teacher_id',currentUser.id);
+  else{
+    if(!allCourses.length){allTasks=[];renderTasks();return;}
+    q=q.in('course_id',allCourses.map(c=>c.id));
+  }
+  const{data}=await q;allTasks=data||[];renderTasks();
+}
+
+async function renderTasks(){
+  const list=document.getElementById('tasks-list');
+  const isT=currentProfile.role==='teacher';
+  let tasks=currentCourseTasks?allTasks.filter(t=>t.course_id===currentCourseTasks):allTasks;
+  if(!isT&&currentTaskFilter!=='all'){
+    const{data:subs}=await db.from('submissions').select('task_id,grade').eq('student_id',currentUser.id);
+    const sm={};(subs||[]).forEach(s=>sm[s.task_id]=s);
+    tasks=tasks.filter(t=>{
+      const s=sm[t.id];
+      if(currentTaskFilter==='pending')return!s;
+      if(currentTaskFilter==='submitted')return s&&s.grade===null;
+      if(currentTaskFilter==='graded')return s&&s.grade!==null;
+    });
+  }
+  if(!tasks.length){list.innerHTML=emptyState('◈','Sin tareas','No hay tareas publicadas aún');return;}
+  list.innerHTML=tasks.map(t=>{
+    const c=allCourses.find(x=>x.id===t.course_id);
+    const due=t.due_date?new Date(t.due_date+'T12:00:00').toLocaleDateString('es-GT',{day:'2-digit',month:'short'}):'Sin fecha';
+    const late=t.due_date&&new Date(t.due_date)<new Date();
+    return `<div class="task-item" onclick="openTaskDetail('${t.id}')">
+      <div class="task-status" style="background:${c?.color||'#6ee7b7'}"></div>
+      <div class="task-info">
+        <div class="task-title">${t.title}</div>
+        <div class="task-meta">
+          <span>📅 ${due}${late?' · <span style="color:var(--red)">vencida</span>':''}</span>
+          ${c?`<span>· ${c.name}</span>`:''}
+          ${isT?`<span id="sc-${t.id}">· cargando...</span>`:''}
+        </div>
+      </div>
+      <div class="task-actions">${t.material_url?`<a class="btn btn-ghost btn-sm" href="${t.material_url}" target="_blank" onclick="event.stopPropagation()">↓</a>`:''}
+        ${isT?`<button class="btn btn-sm" style="background:var(--red-dim);color:var(--red);border:1px solid rgba(248,113,113,0.25)" onclick="event.stopPropagation();deleteTask('${t.id}')">✕</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  if(isT)tasks.forEach(async t=>{
+    const{count}=await db.from('submissions').select('*',{count:'exact',head:true}).eq('task_id',t.id);
+    const el=document.getElementById('sc-'+t.id);if(el)el.textContent=`· ${count||0} entregas`;
+  });
+}
+
+function filterTasks(f,btn){
+  currentTaskFilter=f;
+  document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');renderTasks();
+}
+
+async function createTask(){
+  const courseId=v('nt-course'),title=v('nt-title'),desc=v('nt-desc'),due=v('nt-due');
+  if(!courseId||!title){toast('Completa los campos obligatorios','error');return;}
+  const td={course_id:courseId,title,description:desc,due_date:due||null,teacher_id:currentUser.id};
+  if(taskFileToUpload){
+    const path=`tasks/${currentUser.id}/${Date.now()}_${sanitizeFileName(taskFileToUpload.name)}`;
+    document.getElementById('nt-prog-wrap').style.display='block';
+    document.getElementById('nt-prog-fill').style.width='40%';
+    const{error:ue}=await db.storage.from('files').upload(path,taskFileToUpload);
+    if(ue){toast('Error subiendo archivo: '+ue.message,'error');document.getElementById('nt-prog-wrap').style.display='none';return;}
+    const{data:ud}=db.storage.from('files').getPublicUrl(path);
+    td.material_url=ud.publicUrl;td.material_name=taskFileToUpload.name;
+    taskFileToUpload=null;document.getElementById('nt-prog-fill').style.width='100%';
+    setTimeout(()=>document.getElementById('nt-prog-wrap').style.display='none',500);
+  }
+  const{error}=await db.from('tasks').insert(td);
+  if(error){toast(error.message,'error');return;}
+  closeModal('modal-new-task');set('nt-title','');set('nt-desc','');set('nt-due','');
+  document.getElementById('nt-file-name').textContent='';
+  await loadTasks(currentCourseTasks);toast('Tarea publicada ✓','success');
+}
+
+async function openTaskDetail(taskId){
+  const task=allTasks.find(t=>t.id===taskId);if(!task)return;
+  currentTaskDetail=task;
+  const isT=currentProfile.role==='teacher';
+  document.getElementById('td-title').textContent=task.title;
+  document.getElementById('td-desc').textContent=task.description||'Sin descripción';
+  const c=allCourses.find(x=>x.id===task.course_id);
+  const due=task.due_date?new Date(task.due_date+'T12:00:00').toLocaleDateString('es-GT',{weekday:'long',day:'numeric',month:'long'}):'Sin fecha límite';
+  document.getElementById('td-meta').textContent=`${c?.name||''} · ${due}`;
+  if(task.material_url){
+    document.getElementById('td-material').style.display='block';
+    document.getElementById('td-mat-name').textContent=task.material_name||'Archivo adjunto';
+    document.getElementById('td-mat-link').href=task.material_url;
+  } else document.getElementById('td-material').style.display='none';
+  if(isT){
+    document.getElementById('td-submit-area').style.display='none';
+    document.getElementById('td-grade-area').style.display='block';
+    await loadSubsForTask(task.id);
+  } else {
+    document.getElementById('td-submit-area').style.display='block';
+    document.getElementById('td-grade-area').style.display='none';
+    await loadMySubmission(task.id);
+  }
+  openModal('modal-task-detail');
+}
+
+async function loadMySubmission(taskId){
+  const{data:subs}=await db.from('submissions').select('*')
+    .eq('task_id',taskId).eq('student_id',currentUser.id)
+    .order('submitted_at',{ascending:false});
+
+  const subsList=document.getElementById('td-my-subs-list');
+  const gradeEl=document.getElementById('td-grade-display');
+
+  if(subs?.length){
+    subsList.innerHTML=subs.map((s,i)=>`
+      <div class="material-item" style="margin-bottom:6px">
+        <div class="file-icon" style="background:var(--accent-dim);font-size:12px">${subs.length-i}</div>
+        <div class="file-info">
+          <div class="file-name">${s.file_name||'Archivo entregado'}</div>
+          <div class="file-meta">${new Date(s.submitted_at).toLocaleDateString('es-GT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+        </div>
+        <a class="btn btn-ghost btn-sm" href="${s.file_url}" target="_blank">↓</a>
+      </div>`).join('');
+
+    const latest=subs[0];
+    if(latest.grade!==null&&latest.grade!==undefined){
+      gradeEl.style.display='block';
+      document.getElementById('td-grade-val').textContent=latest.grade+'/100';
+      document.getElementById('td-grade-comment').textContent=latest.comment||'';
+    } else gradeEl.style.display='none';
+  } else {
+    subsList.innerHTML='';
+    gradeEl.style.display='none';
+  }
+
+  document.getElementById('td-upload-area').style.display='block';
+  document.getElementById('td-file-name').textContent='';
+  submitFileToUpload=null;
+}
+
+async function loadSubsForTask(taskId){
+  const{data:subs}=await db.from('submissions').select('*').eq('task_id',taskId).order('submitted_at',{ascending:false});
+  const el=document.getElementById('td-subs-for-grade');
+  if(!subs?.length){el.innerHTML=`<div style="font-size:13px;color:var(--text3)">Sin entregas aún</div>`;return;}
+
+  // Group by student
+  const byStudent={};
+  subs.forEach(s=>{
+    if(!byStudent[s.student_id])byStudent[s.student_id]={name:s.student_name,subs:[],grade:s.grade,gradeId:s.id,comment:s.comment};
+    byStudent[s.student_id].subs.push(s);
+    if(s.grade!==null&&s.grade!==undefined){byStudent[s.student_id].grade=s.grade;byStudent[s.student_id].gradeId=s.id;byStudent[s.student_id].comment=s.comment;}
+  });
+
+  el.innerHTML=Object.values(byStudent).map(st=>`
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:13.5px;font-weight:500">${st.name}</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${st.grade!==null&&st.grade!==undefined?`<div class="sub-grade" style="font-size:16px">${st.grade}/100</div>`:`<span class="badge badge-amber">Sin calificar</span>`}
+          <button class="btn btn-accent btn-sm" onclick="openGradeModal('${st.gradeId}','${st.name}')">Calificar</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        ${st.subs.map((s,i)=>`
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)">
+            <span style="color:var(--text3);font-family:var(--mono)">#${st.subs.length-i}</span>
+            <span style="flex:1">${s.file_name||'archivo'}</span>
+            <span>${new Date(s.submitted_at).toLocaleDateString('es-GT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
+            <a class="btn btn-ghost btn-sm" href="${s.file_url}" target="_blank">↓</a>
+          </div>`).join('')}
+      </div>
+      ${st.comment?`<div style="font-size:12px;color:var(--text2);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">💬 ${st.comment}</div>`:''}
+    </div>`).join('');
+}
+
+async function submitTask(){
+  if(!submitFileToUpload){toast('Selecciona un archivo primero','error');return;}
+  const pw=document.getElementById('td-prog-wrap'),pf=document.getElementById('td-prog-fill'),pt=document.getElementById('td-prog-text');
+  pw.style.display='block';pf.style.width='30%';pt.textContent='Subiendo archivo...';
+  const path=`submissions/${currentUser.id}/${Date.now()}_${sanitizeFileName(submitFileToUpload.name)}`;
+  const{error:ue}=await db.storage.from('files').upload(path,submitFileToUpload);
+  if(ue){toast('Error: '+ue.message,'error');pw.style.display='none';return;}
+  pf.style.width='80%';
+  const{data:ud}=db.storage.from('files').getPublicUrl(path);
+  await db.from('submissions').insert({task_id:currentTaskDetail.id,student_id:currentUser.id,student_name:currentProfile.name,file_url:ud.publicUrl,file_name:submitFileToUpload.name});
+  pf.style.width='100%';pt.textContent='¡Entregado!';
+  setTimeout(()=>pw.style.display='none',1000);
+  submitFileToUpload=null;
+  document.getElementById('td-file-name').textContent='';
+  document.getElementById('td-file').value='';
+  await loadMySubmission(currentTaskDetail.id);toast('Entrega agregada ✓','success');
+}
+
+function openGradeModal(subId,name){
+  currentSubmissionForGrade=subId;
+  document.getElementById('grade-student-name').textContent=name;
+  set('grade-val','');set('grade-comment','');openModal('modal-grade');
+}
+
+async function saveGrade(){
+  const grade=parseInt(v('grade-val'));
+  if(isNaN(grade)||grade<0||grade>100){toast('Nota válida entre 0 y 100','error');return;}
+  await db.from('submissions').update({grade,comment:v('grade-comment')}).eq('id',currentSubmissionForGrade);
+  closeModal('modal-grade');await loadSubsForTask(currentTaskDetail.id);toast('Nota guardada ✓','success');
+}
+
+async function loadSubmissions(){
+  const courseId=v('sub-filter-course');
+  let q=db.from('submissions').select('*').order('submitted_at',{ascending:false});
+  if(courseId){
+    const{data:tasks}=await db.from('tasks').select('id').eq('course_id',courseId);
+    if(!tasks?.length){document.getElementById('submissions-list').innerHTML=emptyState('◑','Sin entregas','No hay entregas para esta clase');return;}
+    q=q.in('task_id',tasks.map(t=>t.id));
+  }
+  const{data:subs}=await q;
+  const list=document.getElementById('submissions-list');
+  if(!subs?.length){list.innerHTML=emptyState('◑','Sin entregas','Aún no hay entregas');return;}
+  list.innerHTML=subs.map(s=>{
+    const task=allTasks.find(t=>t.id===s.task_id);
+    return `<div class="submission-item">
+      <div class="file-icon" style="background:var(--blue-dim)">📄</div>
+      <div class="sub-info"><div class="sub-name">${s.student_name}</div><div class="sub-meta">${task?.title||'Tarea'} · ${new Date(s.submitted_at).toLocaleDateString('es-GT')}</div></div>
+      ${s.grade!==null?`<div class="sub-grade">${s.grade}<span style="font-size:12px;color:var(--text3)">/100</span></div>`:`<span class="badge badge-amber">Sin calificar</span>`}
+      <a class="btn btn-ghost btn-sm" href="${s.file_url}" target="_blank">↓ Ver</a>
+      <button class="btn btn-accent btn-sm" onclick="currentTaskDetail={id:'${s.task_id}'};openGradeModal('${s.id}','${s.student_name}')">Calificar</button>
+    </div>`;
+  }).join('');
+}
+
+
+async function openEditStudent(id,name){
+  set('edit-student-id',id);set('edit-student-name',name);set('edit-student-pass','');
+  const{data}=await db.from('profiles').select('grade_level').eq('id',id).single();
+  set('edit-student-grade',data?.grade_level||'');
+  const{data:en}=await db.from('enrollments').select('course_id').eq('student_id',id);
+  const enrolled=new Set((en||[]).map(e=>e.course_id));
+  const ec=document.getElementById('edit-student-courses');
+  ec.innerHTML=allCourses.map(c=>`<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;background:var(--bg3);padding:4px 10px;border-radius:6px;border:1px solid var(--border)"><input type="checkbox" class="edit-cb" value="${c.id}"${enrolled.has(c.id)?' checked':''}> ${c.name}</label>`).join('');
+  openModal('modal-edit-student');
+}
+async function saveEditStudent(){
+  const id=v('edit-student-id'),name=v('edit-student-name'),grade=v('edit-student-grade'),pass=v('edit-student-pass');
+  if(!name){toast('Ingresa el nombre','error');return;}
+  await db.from('profiles').update({name,grade_level:grade||null}).eq('id',id);
+  if(pass){
+    const{error}=await adminDb.auth.admin.updateUserById(id,{password:pass});
+    if(error){toast('Error cambiando contraseña: '+error.message,'error');return;}
+  }
+  const newCourses=[...document.querySelectorAll('.edit-cb:checked')].map(cb=>cb.value);
+  await db.from('enrollments').delete().eq('student_id',id);
+  for(const cid of newCourses)await db.from('enrollments').insert({course_id:cid,student_id:id});
+  closeModal('modal-edit-student');await loadCourses();await loadStudents();toast('Alumno actualizado ✓','success');
+}
+
+let editCourseColor = '#6ee7b7';
+
+function selectEditColor(el){
+  document.querySelectorAll('[data-target="edit"]').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  editCourseColor=el.dataset.color;
+}
+
+async function openEditCourse(id){
+  const c=allCourses.find(x=>x.id===id);if(!c)return;
+  set('edit-course-id',id);
+  set('edit-course-name',c.name);
+  set('edit-course-desc',c.description||'');
+  editCourseColor=c.color||'#6ee7b7';
+  document.querySelectorAll('[data-target="edit"]').forEach(o=>{
+    o.classList.toggle('selected', o.dataset.color===editCourseColor);
+  });
+  openModal('modal-edit-course');
+}
+
+async function saveEditCourse(){
+  const id=v('edit-course-id'),name=v('edit-course-name'),desc=v('edit-course-desc');
+  if(!name){toast('Ingresa el nombre','error');return;}
+  await db.from('courses').update({name,description:desc,color:editCourseColor}).eq('id',id);
+  closeModal('modal-edit-course');
+  await loadCourses();
+  renderCoursesGrid();
+  toast('Clase actualizada ✓','success');
+}
+
+async function deleteCourse(id,name){
+  if(!confirm('¿Eliminar la clase "'+name+'"? Se eliminarán todas sus tareas y entregas.'))return;
+  const{data:tasks}=await db.from('tasks').select('id,material_url').eq('course_id',id);
+  const taskIds=(tasks||[]).map(t=>t.id);
+  const taskUrls=(tasks||[]).map(t=>t.material_url);
+  let subUrls=[];
+  if(taskIds.length){
+    const{data:subs}=await db.from('submissions').select('file_url').in('task_id',taskIds);
+    subUrls=(subs||[]).map(s=>s.file_url);
+    await db.from('submissions').delete().in('task_id',taskIds);
+  }
+  await deleteStorageFiles([...taskUrls,...subUrls]);
+  await db.from('tasks').delete().eq('course_id',id);
+  await db.from('enrollments').delete().eq('course_id',id);
+  await db.from('messages').delete().eq('course_id',id);
+  await db.from('courses').delete().eq('id',id);
+  await loadCourses();
+  toast('Clase eliminada','success');
+}
+async function deleteStudent(id,name){
+  if(!confirm('¿Eliminar al alumno '+name+'? Esta acción no se puede deshacer.'))return;
+  const{data:subs}=await db.from('submissions').select('file_url').eq('student_id',id);
+  const subUrls=(subs||[]).map(s=>s.file_url);
+  await deleteStorageFiles(subUrls);
+  await db.from('enrollments').delete().eq('student_id',id);
+  await db.from('submissions').delete().eq('student_id',id);
+  await adminDb.from('profiles').delete().eq('id',id);
+  await adminDb.auth.admin.deleteUser(id);
+  await loadStudents();toast('Alumno eliminado','success');
+}
+
+async function deleteTask(taskId){
+  if(!confirm('¿Eliminar esta tarea? También se eliminarán todas las entregas.'))return;
+  const task=allTasks.find(t=>t.id===taskId);
+  const{data:subs}=await db.from('submissions').select('file_url').eq('task_id',taskId);
+  const subUrls=(subs||[]).map(s=>s.file_url);
+  await db.from('submissions').delete().eq('task_id',taskId);
+  await deleteStorageFiles([task?.material_url,...subUrls]);
+  await db.from('tasks').delete().eq('id',taskId);
+  await loadTasks(currentCourseTasks);toast('Tarea eliminada','success');
+}
+
+async function loadStudents(){
+  const{data:students}=await db.from('profiles').select('*').eq('role','student').eq('teacher_id',currentUser.id);
+  const list=document.getElementById('students-list');
+  if(!students?.length){list.innerHTML=emptyState('◉','Sin alumnos','Agrega tu primer alumno');return;}
+  for(const s of students){
+    const{data:en}=await db.from('enrollments').select('course_id').eq('student_id',s.id);
+    s.courseIds=(en||[]).map(e=>e.course_id);
+  }
+  list.innerHTML=students.map(s=>`
+    <div class="submission-item">
+      <div class="avatar" style="width:36px;height:36px;font-size:12px">${initials(s.name)}</div>
+      <div class="sub-info"><div class="sub-name">${s.name}</div><div class="sub-meta">${s.email}${s.grade_level?" · "+s.grade_level:""}</div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${s.courseIds.map(cid=>{const c=allCourses.find(x=>x.id===cid);return c?`<span class="tag">${c.name}</span>`:''}).join('')}</div>
+      <button class="btn btn-ghost btn-sm" onclick="openEditStudent('${s.id}','${s.name.replace(/'/g,"\\'")}')">Editar</button>
+    </div>`).join('');
+}
+
+async function createStudent(){
+  const name=v('ns-name'),email=v('ns-email'),pass=v('ns-pass'),grade=v('ns-grade');
+  if(!name||!email||!pass){toast('Completa todos los campos','error');return;}
+  const courseIds=[...document.querySelectorAll('.ns-cb:checked')].map(cb=>cb.value);
+  const{data,error}=await adminDb.auth.admin.createUser({email,password:pass,email_confirm:true});
+  if(error){toast('Error: '+error.message,'error');return;}
+  await adminDb.from('profiles').insert({id:data.user.id,name,email,role:'student',teacher_id:currentUser.id,grade_level:grade||null});
+  for(const cid of courseIds)await db.from('enrollments').insert({course_id:cid,student_id:data.user.id});
+  closeModal('modal-new-student');set('ns-name','');set('ns-email','');set('ns-pass','');set('ns-grade','');
+  await loadStudents();toast(`Alumno creado ✓  —  Contraseña: ${pass}`,'success');
+}
+
+async function loadChat(){
+  const courseId=v('chat-course-select');if(!courseId)return;
+  if(chatChannel){db.removeChannel(chatChannel);chatChannel=null;}
+  const area=document.getElementById('chat-area');
+  area.innerHTML=`
+    <div class="chat-messages" id="chat-msgs"></div>
+    <div class="chat-input-area">
+      <input type="text" id="chat-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')sendChatMsg()">
+      <button class="btn btn-accent" onclick="sendChatMsg()">Enviar</button>
+    </div>`;
+  const{data:history}=await db.from('messages').select('*').eq('course_id',courseId).order('created_at').limit(50);
+  (history||[]).forEach(m=>appendMsg(m));scrollChat();
+  chatChannel=db.channel('chat-'+courseId)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`course_id=eq.${courseId}`},p=>{appendMsg(p.new);scrollChat();})
+    .subscribe();
+}
+
+function appendMsg(msg){
+  const msgs=document.getElementById('chat-msgs');if(!msgs)return;
+  const mine=msg.user_id===currentUser.id;
+  const time=new Date(msg.created_at).toLocaleTimeString('es-GT',{hour:'2-digit',minute:'2-digit'});
+  const el=document.createElement('div');
+  el.className=`chat-msg ${mine?'mine':'theirs'}`;
+  el.innerHTML=`${!mine?`<div class="chat-msg-sender">${msg.user_name}</div>`:''}${msg.text}<div class="chat-msg-time">${time}</div>`;
+  msgs.appendChild(el);
+}
+function scrollChat(){const m=document.getElementById('chat-msgs');if(m)m.scrollTop=m.scrollHeight;}
+async function sendChatMsg(){
+  const input=document.getElementById('chat-input');const text=input?.value?.trim();if(!text)return;
+  const courseId=v('chat-course-select');
+  await db.from('messages').insert({course_id:courseId,text,user_id:currentUser.id,user_name:currentProfile.name});
+  input.value='';
+}
+
+async function loadStorageUsage(){
+  try{
+    const indicator=document.getElementById('storage-indicator');
+    indicator.style.display='block';
+
+    // Get all file URLs from tasks and submissions
+    const{data:tasks}=await db.from('tasks').select('material_url').eq('teacher_id',currentUser.id).not('material_url','is',null);
+    const{data:subs}=await db.from('submissions').select('file_url');
+
+    const allUrls=[...(tasks||[]).map(t=>t.material_url),...(subs||[]).map(s=>s.file_url)].filter(Boolean);
+
+    // Estimate size by fetching HEAD for each file (sample first 20 to avoid too many requests)
+    const sample=allUrls.slice(0,30);
+    let totalBytes=0;
+    let counted=0;
+
+    await Promise.all(sample.map(async url=>{
+      try{
+        const r=await fetch(url,{method:'HEAD'});
+        const len=r.headers.get('content-length');
+        if(len){totalBytes+=parseInt(len);counted++;}
+      }catch(e){}
+    }));
+
+    // Extrapolate if we sampled
+    if(counted>0&&allUrls.length>sample.length){
+      totalBytes=Math.round(totalBytes/counted*allUrls.length);
+    }
+
+    const LIMIT_GB=1;
+    const LIMIT_BYTES=LIMIT_GB*1024*1024*1024;
+    const pct=Math.min(Math.round(totalBytes/LIMIT_BYTES*100),100);
+    const usedMB=(totalBytes/1024/1024).toFixed(1);
+    const usedGB=(totalBytes/1024/1024/1024).toFixed(3);
+
+    const fill=document.getElementById('storage-fill');
+    const text=document.getElementById('storage-text');
+    const used=document.getElementById('storage-used');
+
+    fill.style.width=pct+'%';
+    fill.style.background=pct>80?'var(--red)':pct>50?'var(--amber)':'var(--accent)';
+    text.textContent=pct+'% usado';
+    used.textContent=usedMB>1024?usedGB+' GB usados':usedMB+' MB usados'+'  ('+allUrls.length+' archivos)';
+
+    if(pct>80){
+      text.style.color='var(--red)';
+      if(pct>90)toast('⚠ Storage al '+pct+'% — considera eliminar tareas antiguas','error');
+    } else if(pct>50){
+      text.style.color='var(--amber)';
+    } else {
+      text.style.color='var(--accent)';
+    }
+  }catch(e){
+    console.error('Storage check error:',e);
+  }
+}
+
+async function loadDashboard(){
+  const isT=currentProfile.role==='teacher';
+  document.getElementById('dash-greeting').textContent=`Hola, ${currentProfile.name.split(' ')[0]} 👋`;
+  await loadTasks();
+  const active=allTasks.filter(t=>!t.due_date||new Date(t.due_date)>=new Date()).length;
+  let ungraded=0;
+  if(isT){const{count}=await db.from('submissions').select('*',{count:'exact',head:true}).is('grade',null);ungraded=count||0;}
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="card"><div style="font-size:12px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em">Clases</div><div style="font-size:32px;font-weight:600;color:var(--accent);font-family:var(--mono)">${allCourses.length}</div></div>
+    <div class="card"><div style="font-size:12px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em">Tareas ${isT?'publicadas':'activas'}</div><div style="font-size:32px;font-weight:600;color:var(--amber);font-family:var(--mono)">${isT?allTasks.length:active}</div></div>
+    ${isT?`<div class="card"><div style="font-size:12px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em">Sin calificar</div><div style="font-size:32px;font-weight:600;color:var(--blue);font-family:var(--mono)">${ungraded}</div></div>`:''}`;
+  if(isT) loadStorageUsage();
+  const recent=document.getElementById('dash-recent');
+  const show=allTasks.slice(0,4);
+  if(!show.length){recent.innerHTML=`<div style="font-size:13px;color:var(--text3)">No hay tareas recientes</div>`;return;}
+  recent.innerHTML=show.map(t=>{
+    const c=allCourses.find(x=>x.id===t.course_id);
+    const due=t.due_date?new Date(t.due_date+'T12:00:00').toLocaleDateString('es-GT',{day:'2-digit',month:'short'}):'—';
+    return `<div class="task-item" onclick="openTaskDetail('${t.id}')">
+      <div class="task-status" style="background:${c?.color||'#6ee7b7'}"></div>
+      <div class="task-info"><div class="task-title">${t.title}</div><div class="task-meta"><span>${c?.name||''}</span><span>· ${due}</span></div></div>
+    </div>`;
+  }).join('');
+}
+
+function showSection(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('section-'+id).classList.add('active');
+  const nav=document.getElementById('nav-'+id);if(nav)nav.classList.add('active');
+  const titles={dashboard:'Panel',courses:'Clases',tasks:'Tareas',chat:'Chat',submissions:'Entregas',students:'Alumnos',exams:'Exámenes'};
+  document.getElementById('topbar-title').textContent=titles[id]||id;
+  if(id==='courses')renderCoursesGrid();
+  if(id==='submissions')loadSubmissions();
+  if(id==='students')loadStudents();
+  if(id==='tasks'){currentTaskFilter='all';currentCourseTasks=null;document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));const ft=document.querySelector('.tabs .tab');if(ft)ft.classList.add('active');loadTasks();document.getElementById('tasks-title').textContent='Tareas';document.getElementById('tasks-sub').textContent='Todas las tareas';}
+}
+
+function openModal(id){if(id==='modal-new-task')populateCourseSelects();if(id==='modal-new-student')populateCourseSelects();document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeModal(o.id);}));
+
+function handleTaskFile(e){taskFileToUpload=e.target.files[0];if(taskFileToUpload)document.getElementById('nt-file-name').textContent='📎 '+taskFileToUpload.name;}
+function handleSubmitFile(e){submitFileToUpload=e.target.files[0];if(submitFileToUpload)document.getElementById('td-file-name').textContent='📎 '+submitFileToUpload.name;}
+function selectColor(el){document.querySelectorAll('.color-opt').forEach(o=>o.classList.remove('selected'));el.classList.add('selected');selectedColor=el.dataset.color;}
+
+
+
+function getStoragePath(url){
+  if(!url)return null;
+  const marker='/files/';
+  const idx=url.indexOf(marker);
+  if(idx===-1)return null;
+  return decodeURIComponent(url.slice(idx+marker.length));
+}
+
+async function deleteStorageFiles(urls){
+  const paths=urls.filter(Boolean).map(getStoragePath).filter(Boolean);
+  if(paths.length)await db.storage.from('files').remove(paths);
+}
+function sanitizeFileName(name){
+  return name
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-zA-Z0-9._-]/g,'_')
+    .replace(/_+/g,'_');
+}
+function v(id){return document.getElementById(id)?.value?.trim()||'';}
+function set(id,val){const el=document.getElementById(id);if(el)el.value=val;}
+function initials(name){return name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);}
+function hexAlpha(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return `rgba(${r},${g},${b},${a})`;}
+function getCourseEmoji(name){
+  const n=name.toLowerCase();
+  if(n.includes('python'))return'🐍';if(n.includes('c++')||n.includes('cpp'))return'⚙';
+  if(n.includes('excel')||n.includes('hoja'))return'📊';if(n.includes('mat'))return'📐';
+  if(n.includes('web')||n.includes('html'))return'🌐';if(n.includes('base')||n.includes('sql'))return'🗄';
+  return'📖';
+}
+function emptyState(icon,title,sub){return `<div class="empty-state"><div class="empty-icon">${icon}</div><div class="empty-title">${title}</div><div class="empty-sub">${sub}</div></div>`;}
+function toast(msg,type='success'){
+  const el=document.createElement('div');
+  el.className=`toast ${type}`;
+  el.innerHTML=`<span style="color:${type==='success'?'var(--accent)':'var(--red)'}">${type==='success'?'✓':'✕'}</span> ${msg}`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>el.remove(),5000);
+}
 </script>
 </body>
 </html>
